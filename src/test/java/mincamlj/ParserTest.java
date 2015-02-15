@@ -29,6 +29,9 @@ public class ParserTest {
 		System.out.println(e);
 
 		// node.accept(new PrettyPrinter());
+		
+		Log.getLogger().info("*info*");
+		Log.getLogger().severe("*severe*");
 	}
 
 }

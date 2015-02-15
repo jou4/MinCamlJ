@@ -27,6 +27,10 @@ public class VarType implements Type {
 		return "VarType [inner=" + inner + "]";
 	}
 
+	public boolean isNone() {
+		return inner == VarType.None.getInstance();
+	}
+
 	public static class None implements Type {
 
 		private static final None t = new None();

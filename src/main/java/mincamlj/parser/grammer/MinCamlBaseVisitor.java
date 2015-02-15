@@ -1,6 +1,5 @@
 // Generated from D:\m122023\code\workspaces\mincamlj\mincamlj\src\main\resources\MinCaml.g4 by ANTLR 4.5
 package mincamlj.parser.grammer;
-import org.antlr.v4.runtime.misc.NotNull;
 import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
 
 /**

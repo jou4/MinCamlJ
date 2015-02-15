@@ -131,8 +131,9 @@ public class SyntaxVisitor extends MinCamlBaseVisitor<SyntaxExpr> {
 				.stream()
 				.map(ident -> new Pair<String, Type>(genIdent(ident.getText()),
 						VarType.genType())).collect(Collectors.toList());
-		SFunDef funDef = new SFunDef(genIdent(ctx.IDENT(0).getText()),
-				VarType.genType(), params, ctx.exp(0).accept(this));
+		SFunDef funDef = new SFunDef(new Pair<String, Type>(genIdent(ctx.IDENT(
+				0).getText()), VarType.genType()), params, ctx.exp(0).accept(
+				this));
 		return new SLetRec(funDef, ctx.exp(1).accept(this));
 	}
 
@@ -207,15 +208,16 @@ public class SyntaxVisitor extends MinCamlBaseVisitor<SyntaxExpr> {
 
 	@Override
 	public SyntaxExpr visitBlock(BlockContext ctx) {
-		return new SLet(Id.genTmp(UnitType.getInstance()),
-				UnitType.getInstance(), ctx.exp(0).accept(this), ctx.exp(1)
-						.accept(this));
+		return new SLet(new Pair<String, Type>(
+				Id.genTmp(UnitType.getInstance()), UnitType.getInstance()), ctx
+				.exp(0).accept(this), ctx.exp(1).accept(this));
 	}
 
 	@Override
 	public SyntaxExpr visitLet(LetContext ctx) {
-		return new SLet(genIdent(ctx.IDENT().getText()), VarType.genType(), ctx
-				.exp(0).accept(this), ctx.exp(1).accept(this));
+		return new SLet(new Pair<String, Type>(genIdent(ctx.IDENT().getText()),
+				VarType.genType()), ctx.exp(0).accept(this), ctx.exp(1).accept(
+				this));
 	}
 
 	@Override

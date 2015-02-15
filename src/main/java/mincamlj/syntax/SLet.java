@@ -9,19 +9,11 @@ public class SLet implements SyntaxExpr {
 	private SyntaxExpr value;
 	private SyntaxExpr body;
 
-	public SLet(String varName, Type varType, SyntaxExpr value, SyntaxExpr body) {
+	public SLet(Pair<String, Type> var, SyntaxExpr value, SyntaxExpr body) {
 		super();
-		this.var = new Pair<String, Type>(varName, varType);
+		this.var = var;
 		this.value = value;
 		this.body = body;
-	}
-
-	public String getVarName() {
-		return var.getLeft();
-	}
-
-	public Type getVarType() {
-		return var.getRight();
 	}
 
 	public Pair<String, Type> getVar() {
