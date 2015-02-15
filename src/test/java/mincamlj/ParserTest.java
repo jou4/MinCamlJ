@@ -31,15 +31,18 @@ public class ParserTest {
 
 		SyntaxExpr e2 = new Typing().typing(e);
 		System.out.println(e2);
-		
+
 		KNormalExpr e3 = new KNormal().transform(e2);
 		System.out.println(e3);
-		
+
 		KNormalExpr e4 = new Alpha().transform(e3);
 		System.out.println(e4);
-		
-		KNormalExpr e5 = new Alpha().transform(e4);
+
+		KNormalExpr e5 = new Beta().transform(e4);
 		System.out.println(e5);
+
+		KNormalExpr e6 = new Assoc().transform(e5);
+		System.out.println(e6);
 	}
 
 }
