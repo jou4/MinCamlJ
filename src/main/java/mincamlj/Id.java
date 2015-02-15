@@ -39,7 +39,7 @@ public class Id {
 		return "T" + prefixOfType(t) + (counter++);
 	}
 
-	public static String getId(String s) {
+	public static String genId(String s) {
 		return s + "." + (counter++);
 	}
 
