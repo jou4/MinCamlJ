@@ -37,6 +37,9 @@ public class ParserTest {
 		
 		KNormalExpr e4 = new Alpha().transform(e3);
 		System.out.println(e4);
+		
+		KNormalExpr e5 = new Alpha().transform(e4);
+		System.out.println(e5);
 	}
 
 }
