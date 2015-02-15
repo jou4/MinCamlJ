@@ -1,19 +1,26 @@
 package mincamlj;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import mincamlj.syntax.SAdd;
 import mincamlj.syntax.SApp;
 import mincamlj.syntax.SArray;
+import mincamlj.syntax.SBool;
 import mincamlj.syntax.SEq;
 import mincamlj.syntax.SFAdd;
 import mincamlj.syntax.SFDiv;
 import mincamlj.syntax.SFMul;
 import mincamlj.syntax.SFNeg;
 import mincamlj.syntax.SFSub;
+import mincamlj.syntax.SFloat;
 import mincamlj.syntax.SFunDef;
 import mincamlj.syntax.SGet;
 import mincamlj.syntax.SIf;
+import mincamlj.syntax.SInt;
 import mincamlj.syntax.SLe;
 import mincamlj.syntax.SLet;
 import mincamlj.syntax.SLetRec;
@@ -23,12 +30,17 @@ import mincamlj.syntax.SNot;
 import mincamlj.syntax.SPut;
 import mincamlj.syntax.SSub;
 import mincamlj.syntax.STuple;
+import mincamlj.syntax.SUnit;
+import mincamlj.syntax.SVar;
 import mincamlj.syntax.SyntaxExpr;
 import mincamlj.type.ArrayType;
+import mincamlj.type.BoolType;
+import mincamlj.type.FloatType;
 import mincamlj.type.FunType;
 import mincamlj.type.IntType;
 import mincamlj.type.TupleType;
 import mincamlj.type.Type;
+import mincamlj.type.UnitType;
 import mincamlj.type.VarType;
 import mincamlj.util.Pair;
 
@@ -183,7 +195,274 @@ public class Typing {
 		return false;
 	}
 
-	public void unify(Type t1, Type t2) {
+	public void unify(Type t1, Type t2) throws UnifyError {
+		if (t1 instanceof UnitType && t2 instanceof UnitType) {
+			return;
+		}
+		if (t1 instanceof BoolType && t2 instanceof BoolType) {
+			return;
+		}
+		if (t1 instanceof IntType && t2 instanceof IntType) {
+			return;
+		}
+		if (t1 instanceof FloatType && t2 instanceof FloatType) {
+			return;
+		}
 
+		if (t1 instanceof FunType && t2 instanceof FunType) {
+			FunType t1_ = (FunType) t1;
+			FunType t2_ = (FunType) t2;
+
+			if (t1_.getParams().size() != t2_.getParams().size()) {
+				throw new UnifyError(new Pair<Type, Type>(t1, t2));
+			}
+
+			for (int i = 0; i < t1_.getParams().size(); i++) {
+				unify(t1_.getParams().get(i), t2_.getParams().get(i));
+			}
+
+			unify(t1_.getReturned(), t2_.getReturned());
+			return;
+		}
+		if (t1 instanceof TupleType && t2 instanceof TupleType) {
+			TupleType t1_ = (TupleType) t1;
+			TupleType t2_ = (TupleType) t2;
+
+			if (t1_.getInners().size() != t2_.getInners().size()) {
+				throw new UnifyError(new Pair<Type, Type>(t1, t2));
+			}
+
+			for (int i = 0; i < t1_.getInners().size(); i++) {
+				unify(t1_.getInners().get(i), t2_.getInners().get(i));
+			}
+
+			return;
+		}
+		if (t1 instanceof ArrayType && t2 instanceof ArrayType) {
+			ArrayType t1_ = (ArrayType) t1;
+			ArrayType t2_ = (ArrayType) t2;
+			unify(t1_.getInner(), t2_.getInner());
+			return;
+		}
+		if (t1 instanceof VarType && t2 instanceof VarType) {
+			VarType t1_ = (VarType) t1;
+			VarType t2_ = (VarType) t2;
+			if (t1_.getInner() == t2_.getInner()) {
+				return;
+			}
+		}
+		if (t1 instanceof VarType) {
+			VarType t1_ = (VarType) t1;
+			if (t1_.isNone()) {
+				if (occur(t1_.getInner(), t2)) {
+					throw new UnifyError(new Pair<Type, Type>(t1, t2));
+				} else {
+					t1_.setInner(t2);
+					return;
+				}
+			} else {
+				unify(t1_.getInner(), t2);
+				return;
+			}
+		}
+		if (t2 instanceof VarType) {
+			VarType t2_ = (VarType) t2;
+			if (t2_.isNone()) {
+				if (occur(t2_.getInner(), t1)) {
+					throw new UnifyError(new Pair<Type, Type>(t1, t2));
+				} else {
+					t2_.setInner(t1);
+					return;
+				}
+			} else {
+				unify(t1, t2_.getInner());
+				return;
+			}
+		}
+
+		throw new UnifyError(new Pair<Type, Type>(t1, t2));
+	}
+
+	public Type infer(SyntaxExpr e, Map<String, Type> env) throws TypingError {
+		try {
+			if (e instanceof SUnit) {
+				return UnitType.getInstance();
+			} else if (e instanceof SBool) {
+				return BoolType.getInstance();
+			} else if (e instanceof SInt) {
+				return IntType.getInstance();
+			} else if (e instanceof SFloat) {
+				return FloatType.getInstance();
+			} else if (e instanceof SNot) {
+				SNot e1 = (SNot) e;
+				unify(BoolType.getInstance(), infer(e1.getExpr(), env));
+				return BoolType.getInstance();
+			} else if (e instanceof SNeg) {
+				SNeg e1 = (SNeg) e;
+				unify(IntType.getInstance(), infer(e1.getExpr(), env));
+				return IntType.getInstance();
+			} else if (e instanceof SAdd) {
+				SAdd e1 = (SAdd) e;
+				unify(IntType.getInstance(), infer(e1.getLeft(), env));
+				unify(IntType.getInstance(), infer(e1.getRight(), env));
+				return IntType.getInstance();
+			} else if (e instanceof SSub) {
+				SSub e1 = (SSub) e;
+				unify(IntType.getInstance(), infer(e1.getLeft(), env));
+				unify(IntType.getInstance(), infer(e1.getRight(), env));
+				return IntType.getInstance();
+			} else if (e instanceof SFNeg) {
+				SFNeg e1 = (SFNeg) e;
+				unify(FloatType.getInstance(), infer(e1.getExpr(), env));
+				return FloatType.getInstance();
+			} else if (e instanceof SFAdd) {
+				SFAdd e1 = (SFAdd) e;
+				unify(FloatType.getInstance(), infer(e1.getLeft(), env));
+				unify(FloatType.getInstance(), infer(e1.getRight(), env));
+				return FloatType.getInstance();
+			} else if (e instanceof SFSub) {
+				SFSub e1 = (SFSub) e;
+				unify(FloatType.getInstance(), infer(e1.getLeft(), env));
+				unify(FloatType.getInstance(), infer(e1.getRight(), env));
+				return FloatType.getInstance();
+			} else if (e instanceof SFMul) {
+				SFMul e1 = (SFMul) e;
+				unify(FloatType.getInstance(), infer(e1.getLeft(), env));
+				unify(FloatType.getInstance(), infer(e1.getRight(), env));
+				return FloatType.getInstance();
+			} else if (e instanceof SFDiv) {
+				SFDiv e1 = (SFDiv) e;
+				unify(FloatType.getInstance(), infer(e1.getLeft(), env));
+				unify(FloatType.getInstance(), infer(e1.getRight(), env));
+				return FloatType.getInstance();
+			} else if (e instanceof SEq) {
+				SEq e1 = (SEq) e;
+				unify(infer(e1.getLeft(), env), infer(e1.getRight(), env));
+				return BoolType.getInstance();
+			} else if (e instanceof SLe) {
+				SLe e1 = (SLe) e;
+				unify(infer(e1.getLeft(), env), infer(e1.getRight(), env));
+				return BoolType.getInstance();
+			} else if (e instanceof SIf) {
+				SIf e1 = (SIf) e;
+				unify(infer(e1.getPred(), env), BoolType.getInstance());
+				Type tt = infer(e1.getTrueExpr(), env);
+				Type ft = infer(e1.getFalseExpr(), env);
+				unify(tt, ft);
+				return tt;
+			} else if (e instanceof SLet) {
+				SLet e1 = (SLet) e;
+				unify(e1.getVar().getRight(), infer(e1.getValue(), env));
+				Map<String, Type> newEnv = new HashMap<>(env);
+				newEnv.put(e1.getVar().getLeft(), e1.getVar().getRight());
+				return infer(e1.getBody(), newEnv);
+			} else if (e instanceof SVar) {
+				SVar e1 = (SVar) e;
+				if (env.containsKey(e1.getName())) {
+					return env.get(e1.getName());
+				} else if (extEnv.containsKey(e1.getName())) {
+					return extEnv.get(e1.getName());
+				} else {
+					Log.getLogger().info(
+							String.format(
+									"free variable %s assumed as external@.",
+									e1.getName()));
+					VarType t = VarType.genType();
+					extEnv.put(e1.getName(), t);
+					return t;
+				}
+			} else if (e instanceof SLetRec) {
+				SLetRec e1 = (SLetRec) e;
+				SFunDef funDef = e1.getFunDef();
+				Map<String, Type> newEnv = new HashMap<>(env);
+				newEnv.put(funDef.getName().getLeft(), funDef.getName()
+						.getRight());
+				Map<String, Type> newEnv2 = new HashMap<>(newEnv);
+				funDef.getParams().forEach(
+						p -> newEnv2.put(p.getLeft(), p.getRight()));
+				unify(funDef.getName().getRight(),
+						new FunType(funDef.getParams().stream()
+								.map(p -> p.getRight())
+								.collect(Collectors.toList()), infer(
+								funDef.getBody(), newEnv2)));
+				return infer(e1.getBody(), newEnv);
+			} else if (e instanceof SApp) {
+				SApp e1 = (SApp) e;
+				VarType t = VarType.genType();
+
+				List<Type> argTypes = new ArrayList<>();
+				for (SyntaxExpr a : e1.getArgs()) {
+					argTypes.add(infer(a, env));
+				}
+				unify(infer(e1.getFunc(), env), new FunType(argTypes, t));
+
+				return t;
+			} else if (e instanceof STuple) {
+				STuple e1 = (STuple) e;
+				List<Type> inners = new ArrayList<>();
+				for (SyntaxExpr v : e1.getValues()) {
+					inners.add(infer(v, env));
+				}
+				return new TupleType(inners);
+			} else if (e instanceof SLetTuple) {
+				SLetTuple e1 = (SLetTuple) e;
+				unify(new TupleType(e1.getVars().stream()
+						.map(v -> v.getRight()).collect(Collectors.toList())),
+						infer(e1.getValue(), env));
+				Map<String, Type> newEnv = new HashMap<>(env);
+				e1.getVars()
+						.forEach(v -> newEnv.put(v.getLeft(), v.getRight()));
+				return infer(e1.getBody(), newEnv);
+			} else if (e instanceof SArray) {
+				SArray e1 = (SArray) e;
+				unify(infer(e1.getLength(), env), IntType.getInstance());
+				return new ArrayType(infer(e1.getInitial(), env));
+			} else if (e instanceof SGet) {
+				SGet e1 = (SGet) e;
+				VarType t = VarType.genType();
+				unify(new ArrayType(t), infer(e1.getArray(), env));
+				unify(IntType.getInstance(), infer(e1.getIndex(), env));
+				return t;
+			} else if (e instanceof SPut) {
+				SPut e1 = (SPut) e;
+				Type t = infer(e1.getValue(), env);
+				unify(new ArrayType(t), infer(e1.getArray(), env));
+				unify(IntType.getInstance(), infer(e1.getIndex(), env));
+				return t;
+			}
+		} catch (UnifyError err) {
+			Pair<Type, Type> errorTypes = err.getErrorTypes();
+			throw new TypingError(derefTerm(e), new Pair<Type, Type>(
+					derefType(errorTypes.getLeft()),
+					derefType(errorTypes.getRight())));
+		}
+		
+		throw new RuntimeException("unknown expression: " + e);
+	}
+
+	private Map<String, Type> extEnv;
+
+	public SyntaxExpr typing(SyntaxExpr e) {
+		extEnv = new HashMap<>();
+		Map<String, Type> env = new HashMap<>();
+		try {
+			unify(UnitType.getInstance(), infer(e, env));
+		} catch (UnifyError err) {
+			Log.getLogger().severe("top level does not have type unit");
+			throw new RuntimeException("top level does not have type unit");
+		} catch (TypingError err) {
+			Log.getLogger().severe(
+					"typing error. expression: " + err.getExpr()
+							+ " ; expected: " + err.getErrorTypes().getLeft()
+							+ " ; actual: " + err.getErrorTypes().getRight());
+			throw new RuntimeException(err);
+		}
+		Map<String, Type> tmpEnv = new HashMap<>();
+		for (String key : extEnv.keySet()) {
+			tmpEnv.put(key, derefType(extEnv.get(key)));
+		}
+		extEnv = tmpEnv;
+		Log.getLogger().info("external env: " + extEnv);
+		return derefTerm(e);
 	}
 }

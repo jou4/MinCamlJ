@@ -16,7 +16,7 @@ public class ParserTest {
 	public void test() {
 		String s = "";
 		// s = "if a = 10 then a + 2 else a - 3";
-		s = "let a = 1 in let b = 2.0 in let c = (a, b) in let (d, e) = c in e";
+		s = "let a = 1 in let b = 2.0 in let c = (a, b) in let (d, e) = c in print_float e";
 		MinCamlLexer lexer = new MinCamlLexer(new ANTLRInputStream(s));
 		CommonTokenStream tokens = new CommonTokenStream(lexer);
 		MinCamlParser parser = new MinCamlParser(tokens);
@@ -28,10 +28,8 @@ public class ParserTest {
 		SyntaxExpr e = visitor.visit(context);
 		System.out.println(e);
 
-		// node.accept(new PrettyPrinter());
+		System.out.println(new Typing().typing(e));
 		
-		Log.getLogger().info("*info*");
-		Log.getLogger().severe("*severe*");
 	}
 
 }

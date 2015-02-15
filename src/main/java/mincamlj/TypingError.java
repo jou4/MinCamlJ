@@ -4,8 +4,9 @@ import mincamlj.syntax.SyntaxExpr;
 import mincamlj.type.Type;
 import mincamlj.util.Pair;
 
-public class TypingError {
+public class TypingError extends Exception {
 
+	private static final long serialVersionUID = 1L;
 	private SyntaxExpr expr;
 	private Pair<Type, Type> errorTypes;
 
