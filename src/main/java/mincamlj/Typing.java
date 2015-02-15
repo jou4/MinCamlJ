@@ -436,11 +436,11 @@ public class Typing {
 					derefType(errorTypes.getLeft()),
 					derefType(errorTypes.getRight())));
 		}
-		
+
 		throw new RuntimeException("unknown expression: " + e);
 	}
 
-	private Map<String, Type> extEnv;
+	public static Map<String, Type> extEnv;
 
 	public SyntaxExpr typing(SyntaxExpr e) {
 		extEnv = new HashMap<>();

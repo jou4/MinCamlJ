@@ -1,5 +1,6 @@
 package mincamlj;
 
+import mincamlj.knormal.KNormalExpr;
 import mincamlj.parser.SyntaxVisitor;
 import mincamlj.parser.grammer.MinCamlLexer;
 import mincamlj.parser.grammer.MinCamlParser;
@@ -28,8 +29,11 @@ public class ParserTest {
 		SyntaxExpr e = visitor.visit(context);
 		System.out.println(e);
 
-		System.out.println(new Typing().typing(e));
+		SyntaxExpr e2 = new Typing().typing(e);
+		System.out.println(e2);
 		
+		KNormalExpr e3 = new KNormal().transform(e2);
+		System.out.println(e3);
 	}
 
 }
