@@ -43,4 +43,24 @@ public class Id {
 		return s + "." + (counter++);
 	}
 
+	public static class Label {
+
+		private String name;
+
+		public Label(String name) {
+			super();
+			this.name = name;
+		}
+
+		public String getName() {
+			return name;
+		}
+
+		@Override
+		public String toString() {
+			return "Label [name=" + name + "]";
+		}
+
+	}
+
 }

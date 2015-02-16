@@ -1,8 +1,15 @@
 package mincamlj;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+import mincamlj.closure.CFunDef;
+import mincamlj.closure.CProg;
+import mincamlj.closure.ClosureExpr;
 import mincamlj.knormal.KAdd;
 import mincamlj.knormal.KApp;
 import mincamlj.knormal.KExtArray;
@@ -27,69 +34,75 @@ import mincamlj.knormal.KSub;
 import mincamlj.knormal.KTuple;
 import mincamlj.knormal.KUnit;
 import mincamlj.knormal.KVar;
+import mincamlj.type.Type;
 
 public class Closure {
 
-	public String find(String name, Map<String, String> env) {
-		return (env.containsKey(name)) ? env.get(name) : name;
+	private List<CFunDef> toplevel;
+
+	public Set<String> freeVars(ClosureExpr e) {
+		// TODO
+		return null;
 	}
 
-	public KNormalExpr transform(KNormalExpr e, Map<String, String> env) {
-		if(e instanceof KUnit){
-			
-		}else if(e instanceof KInt){
+	public ClosureExpr transformExpr(KNormalExpr e, Map<String, Type> env,
+			Set<String> known) {
+		if (e instanceof KUnit) {
+
+		} else if (e instanceof KInt) {
 			KInt e1 = (KInt) e;
-		}else if(e instanceof KFloat){
+		} else if (e instanceof KFloat) {
 			KFloat e1 = (KFloat) e;
-		}else if(e instanceof KNeg){
+		} else if (e instanceof KNeg) {
 			KNeg e1 = (KNeg) e;
-		}else if(e instanceof KAdd){
+		} else if (e instanceof KAdd) {
 			KAdd e1 = (KAdd) e;
-		}else if(e instanceof KSub){
+		} else if (e instanceof KSub) {
 			KSub e1 = (KSub) e;
-		}else if(e instanceof KFNeg){
+		} else if (e instanceof KFNeg) {
 			KFNeg e1 = (KFNeg) e;
-		}else if(e instanceof KFAdd){
+		} else if (e instanceof KFAdd) {
 			KFAdd e1 = (KFAdd) e;
-		}else if(e instanceof KFSub){
+		} else if (e instanceof KFSub) {
 			KFSub e1 = (KFSub) e;
-		}else if(e instanceof KFMul){
+		} else if (e instanceof KFMul) {
 			KFMul e1 = (KFMul) e;
-		}else if(e instanceof KFDiv){
+		} else if (e instanceof KFDiv) {
 			KFDiv e1 = (KFDiv) e;
-		}else if(e instanceof KIfEq){
+		} else if (e instanceof KIfEq) {
 			KIfEq e1 = (KIfEq) e;
-		}else if(e instanceof KIfLe){
+		} else if (e instanceof KIfLe) {
 			KIfLe e1 = (KIfLe) e;
-		}else if(e instanceof KLet){
+		} else if (e instanceof KLet) {
 			KLet e1 = (KLet) e;
-		}else if(e instanceof KVar){
+		} else if (e instanceof KVar) {
 			KVar e1 = (KVar) e;
-		}else if(e instanceof KLetRec){
+		} else if (e instanceof KLetRec) {
 			KLetRec e1 = (KLetRec) e;
-		}else if(e instanceof KApp){
+		} else if (e instanceof KApp) {
 			KApp e1 = (KApp) e;
-		}else if(e instanceof KTuple){
+		} else if (e instanceof KTuple) {
 			KTuple e1 = (KTuple) e;
-		}else if(e instanceof KLetTuple){
+		} else if (e instanceof KLetTuple) {
 			KLetTuple e1 = (KLetTuple) e;
-		}else if(e instanceof KGet){
+		} else if (e instanceof KGet) {
 			KGet e1 = (KGet) e;
-		}else if(e instanceof KPut){
+		} else if (e instanceof KPut) {
 			KPut e1 = (KPut) e;
-		}else if(e instanceof KExtArray){
+		} else if (e instanceof KExtArray) {
 			KExtArray e1 = (KExtArray) e;
-		}else if(e instanceof KExtFunApp){
+		} else if (e instanceof KExtFunApp) {
 			KExtFunApp e1 = (KExtFunApp) e;
-			
+
 		}
-		
-		
+
 		throw new RuntimeException("unknown expression: " + e);
 	}
 
-	public KNormalExpr transform(KNormalExpr e) {
-		return transform(e, new HashMap<String, String>());
+	public CProg transform(KNormalExpr e) {
+		toplevel = new ArrayList<CFunDef>();
+		ClosureExpr e1 = transformExpr(e, new HashMap<>(), new HashSet<>());
+		return new CProg(toplevel, e1);
 	}
 
 }
