@@ -3,9 +3,12 @@ package mincamlj;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import mincamlj.knormal.KAdd;
 import mincamlj.knormal.KApp;
@@ -69,6 +72,103 @@ import mincamlj.type.UnitType;
 import mincamlj.util.Pair;
 
 public class KNormal {
+
+	public static Set<String> freeVars(KNormalExpr e) {
+		if (e instanceof KUnit) {
+			return new HashSet<>();
+		} else if (e instanceof KInt) {
+			return new HashSet<>();
+		} else if (e instanceof KFloat) {
+			return new HashSet<>();
+		} else if (e instanceof KNeg) {
+			KNeg e1 = (KNeg) e;
+			return new HashSet<>(Arrays.asList(e1.getInner()));
+		} else if (e instanceof KAdd) {
+			KAdd e1 = (KAdd) e;
+			return new HashSet<>(Arrays.asList(e1.getLeft(), e1.getRight()));
+		} else if (e instanceof KSub) {
+			KSub e1 = (KSub) e;
+			return new HashSet<>(Arrays.asList(e1.getLeft(), e1.getRight()));
+		} else if (e instanceof KFNeg) {
+			KFNeg e1 = (KFNeg) e;
+			return new HashSet<>(Arrays.asList(e1.getInner()));
+		} else if (e instanceof KFAdd) {
+			KFAdd e1 = (KFAdd) e;
+			return new HashSet<>(Arrays.asList(e1.getLeft(), e1.getRight()));
+		} else if (e instanceof KFSub) {
+			KFSub e1 = (KFSub) e;
+			return new HashSet<>(Arrays.asList(e1.getLeft(), e1.getRight()));
+		} else if (e instanceof KFMul) {
+			KFMul e1 = (KFMul) e;
+			return new HashSet<>(Arrays.asList(e1.getLeft(), e1.getRight()));
+		} else if (e instanceof KFDiv) {
+			KFDiv e1 = (KFDiv) e;
+			return new HashSet<>(Arrays.asList(e1.getLeft(), e1.getRight()));
+		} else if (e instanceof KIfEq) {
+			KIfEq e1 = (KIfEq) e;
+			Set<String> fvs = new HashSet<>(Arrays.asList(e1.getLeft(),
+					e1.getRight()));
+			fvs.addAll(freeVars(e1.getTrueExpr()));
+			fvs.addAll(freeVars(e1.getFalseExpr()));
+			return fvs;
+		} else if (e instanceof KIfLe) {
+			KIfLe e1 = (KIfLe) e;
+			Set<String> fvs = new HashSet<>(Arrays.asList(e1.getLeft(),
+					e1.getRight()));
+			fvs.addAll(freeVars(e1.getTrueExpr()));
+			fvs.addAll(freeVars(e1.getFalseExpr()));
+			return fvs;
+		} else if (e instanceof KLet) {
+			KLet e1 = (KLet) e;
+			Set<String> fvs = new HashSet<>();
+			fvs.addAll(freeVars(e1.getBody()));
+			fvs.remove(e1.getVar().getLeft());
+			fvs.addAll(freeVars(e1.getValue()));
+			return fvs;
+		} else if (e instanceof KVar) {
+			KVar e1 = (KVar) e;
+			return new HashSet<>(Arrays.asList(e1.getName()));
+		} else if (e instanceof KLetRec) {
+			KLetRec e1 = (KLetRec) e;
+			KFunDef funDef = e1.getFunDef();
+			Set<String> fvs = freeVars(funDef.getBody());
+			Set<String> boundVars = funDef.getParams().stream()
+					.map(p -> p.getLeft()).collect(Collectors.toSet());
+			fvs.removeAll(boundVars);
+			fvs.addAll(freeVars(e1.getBody()));
+			fvs.remove(funDef.getName().getLeft());
+			return fvs;
+		} else if (e instanceof KApp) {
+			KApp e1 = (KApp) e;
+			Set<String> fvs = new HashSet<>(Arrays.asList(e1.getFunc()));
+			fvs.addAll(e1.getArgs());
+			return fvs;
+		} else if (e instanceof KTuple) {
+			KTuple e1 = (KTuple) e;
+			return new HashSet<>(e1.getValues());
+		} else if (e instanceof KLetTuple) {
+			KLetTuple e1 = (KLetTuple) e;
+			Set<String> fvs = freeVars(e1.getBody());
+			Set<String> boundVars = e1.getVars().stream().map(p -> p.getLeft())
+					.collect(Collectors.toSet());
+			fvs.removeAll(boundVars);
+			fvs.add(e1.getValue());
+			return fvs;
+		} else if (e instanceof KGet) {
+			KGet e1 = (KGet) e;
+			return new HashSet<>(Arrays.asList(e1.getArray(), e1.getIndex()));
+		} else if (e instanceof KPut) {
+			KPut e1 = (KPut) e;
+			return new HashSet<>(Arrays.asList(e1.getArray(), e1.getIndex(),
+					e1.getValue()));
+		} else if (e instanceof KExtArray) {
+			return new HashSet<>();
+		} else if (e instanceof KExtFunApp) {
+			KExtFunApp e1 = (KExtFunApp) e;
+			return new HashSet<>(e1.getArgs());
+		}
+		return new HashSet<>();
+	}
 
 	public Pair<KNormalExpr, Type> insertLet(Pair<KNormalExpr, Type> et,
 			Function<String, Pair<KNormalExpr, Type>> k) {
