@@ -33,6 +33,8 @@ public class ParserTest {
 		SyntaxExpr e2 = new Typing().typing(e);
 		System.out.println(e2);
 
+		System.out.println("-- extenv: " + Typing.extEnv);
+
 		KNormalExpr e3 = new KNormal().transform(e2);
 		System.out.println(e3);
 
