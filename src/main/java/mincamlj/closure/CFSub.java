@@ -2,20 +2,20 @@ package mincamlj.closure;
 
 public class CFSub implements ClosureExpr {
 
-	private float left;
-	private float right;
+	private String left;
+	private String right;
 
-	public CFSub(float left, float right) {
+	public CFSub(String left, String right) {
 		super();
 		this.left = left;
 		this.right = right;
 	}
 
-	public float getLeft() {
+	public String getLeft() {
 		return left;
 	}
 
-	public float getRight() {
+	public String getRight() {
 		return right;
 	}
 

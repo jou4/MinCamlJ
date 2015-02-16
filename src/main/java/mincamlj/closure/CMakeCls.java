@@ -11,11 +11,11 @@ public class CMakeCls implements ClosureExpr {
 
 	private Pair<String, Type> name;
 	private Id.Label entry;
-	private List<Id.Label> freeVars;
+	private List<String> freeVars;
 	private ClosureExpr body;
 
-	public CMakeCls(Pair<String, Type> name, Label entry, List<Label> freeVars,
-			ClosureExpr body) {
+	public CMakeCls(Pair<String, Type> name, Label entry,
+			List<String> freeVars, ClosureExpr body) {
 		super();
 		this.name = name;
 		this.entry = entry;
@@ -31,7 +31,7 @@ public class CMakeCls implements ClosureExpr {
 		return entry;
 	}
 
-	public List<Id.Label> getFreeVars() {
+	public List<String> getFreeVars() {
 		return freeVars;
 	}
 

@@ -1,5 +1,6 @@
 package mincamlj;
 
+import mincamlj.closure.CProg;
 import mincamlj.knormal.KNormalExpr;
 import mincamlj.parser.SyntaxVisitor;
 import mincamlj.parser.grammer.MinCamlLexer;
@@ -52,6 +53,9 @@ public class ParserTest {
 
 		KNormalExpr e9 = new Elim().transform(e8);
 		System.out.println(e9);
+
+		CProg prog = new Closure().transform(e9);
+		System.out.println(prog);
 	}
 
 }
