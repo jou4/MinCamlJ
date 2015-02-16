@@ -46,6 +46,9 @@ public class ParserTest {
 
 		KNormalExpr e7 = new Inline().transform(e6);
 		System.out.println(e7);
+
+		KNormalExpr e8 = new ConstFold().transform(e7);
+		System.out.println(e8);
 	}
 
 }

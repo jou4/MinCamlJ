@@ -1,19 +1,17 @@
 package mincamlj;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import mincamlj.knormal.KAdd;
-import mincamlj.knormal.KApp;
-import mincamlj.knormal.KExtArray;
-import mincamlj.knormal.KExtFunApp;
 import mincamlj.knormal.KFAdd;
 import mincamlj.knormal.KFDiv;
 import mincamlj.knormal.KFMul;
 import mincamlj.knormal.KFNeg;
 import mincamlj.knormal.KFSub;
 import mincamlj.knormal.KFloat;
-import mincamlj.knormal.KGet;
+import mincamlj.knormal.KFunDef;
 import mincamlj.knormal.KIfEq;
 import mincamlj.knormal.KIfLe;
 import mincamlj.knormal.KInt;
@@ -22,74 +20,196 @@ import mincamlj.knormal.KLetRec;
 import mincamlj.knormal.KLetTuple;
 import mincamlj.knormal.KNeg;
 import mincamlj.knormal.KNormalExpr;
-import mincamlj.knormal.KPut;
 import mincamlj.knormal.KSub;
 import mincamlj.knormal.KTuple;
-import mincamlj.knormal.KUnit;
 import mincamlj.knormal.KVar;
+import mincamlj.type.Type;
+import mincamlj.util.Pair;
 
 public class ConstFold {
 
-	public String find(String name, Map<String, String> env) {
-		return (env.containsKey(name)) ? env.get(name) : name;
+	public boolean memi(String name, Map<String, KNormalExpr> env) {
+		if (env.containsKey(name)) {
+			KNormalExpr e = env.get(name);
+			if (e instanceof KInt) {
+				return true;
+			}
+		}
+		return false;
 	}
 
-	public KNormalExpr transform(KNormalExpr e, Map<String, String> env) {
-		if(e instanceof KUnit){
-			
-		}else if(e instanceof KInt){
-			KInt e1 = (KInt) e;
-		}else if(e instanceof KFloat){
-			KFloat e1 = (KFloat) e;
-		}else if(e instanceof KNeg){
-			KNeg e1 = (KNeg) e;
-		}else if(e instanceof KAdd){
-			KAdd e1 = (KAdd) e;
-		}else if(e instanceof KSub){
-			KSub e1 = (KSub) e;
-		}else if(e instanceof KFNeg){
-			KFNeg e1 = (KFNeg) e;
-		}else if(e instanceof KFAdd){
-			KFAdd e1 = (KFAdd) e;
-		}else if(e instanceof KFSub){
-			KFSub e1 = (KFSub) e;
-		}else if(e instanceof KFMul){
-			KFMul e1 = (KFMul) e;
-		}else if(e instanceof KFDiv){
-			KFDiv e1 = (KFDiv) e;
-		}else if(e instanceof KIfEq){
-			KIfEq e1 = (KIfEq) e;
-		}else if(e instanceof KIfLe){
-			KIfLe e1 = (KIfLe) e;
-		}else if(e instanceof KLet){
-			KLet e1 = (KLet) e;
-		}else if(e instanceof KVar){
-			KVar e1 = (KVar) e;
-		}else if(e instanceof KLetRec){
-			KLetRec e1 = (KLetRec) e;
-		}else if(e instanceof KApp){
-			KApp e1 = (KApp) e;
-		}else if(e instanceof KTuple){
-			KTuple e1 = (KTuple) e;
-		}else if(e instanceof KLetTuple){
-			KLetTuple e1 = (KLetTuple) e;
-		}else if(e instanceof KGet){
-			KGet e1 = (KGet) e;
-		}else if(e instanceof KPut){
-			KPut e1 = (KPut) e;
-		}else if(e instanceof KExtArray){
-			KExtArray e1 = (KExtArray) e;
-		}else if(e instanceof KExtFunApp){
-			KExtFunApp e1 = (KExtFunApp) e;
-			
+	public boolean memf(String name, Map<String, KNormalExpr> env) {
+		if (env.containsKey(name)) {
+			KNormalExpr e = env.get(name);
+			if (e instanceof KFloat) {
+				return true;
+			}
 		}
-		
-		
-		throw new RuntimeException("unknown expression: " + e);
+		return false;
+	}
+
+	public boolean memt(String name, Map<String, KNormalExpr> env) {
+		if (env.containsKey(name)) {
+			KNormalExpr e = env.get(name);
+			if (e instanceof KTuple) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public int findi(String name, Map<String, KNormalExpr> env) {
+		if (env.containsKey(name)) {
+			KNormalExpr e = env.get(name);
+			if (e instanceof KInt) {
+				return ((KInt) e).getValue();
+			}
+		}
+		throw new RuntimeException("not found: " + name);
+	}
+
+	public float findf(String name, Map<String, KNormalExpr> env) {
+		if (env.containsKey(name)) {
+			KNormalExpr e = env.get(name);
+			if (e instanceof KFloat) {
+				return ((KFloat) e).getValue();
+			}
+		}
+		throw new RuntimeException("not found: " + name);
+	}
+
+	public List<String> findt(String name, Map<String, KNormalExpr> env) {
+		if (env.containsKey(name)) {
+			KNormalExpr e = env.get(name);
+			if (e instanceof KTuple) {
+				return ((KTuple) e).getValues();
+			}
+		}
+		throw new RuntimeException("not found: " + name);
+	}
+
+	public KNormalExpr transform(KNormalExpr e, Map<String, KNormalExpr> env) {
+		if (e instanceof KVar) {
+			KVar e1 = (KVar) e;
+			if (memi(e1.getName(), env)) {
+				return new KInt(findi(e1.getName(), env));
+			}
+		} else if (e instanceof KNeg) {
+			KNeg e1 = (KNeg) e;
+			if (memi(e1.getInner(), env)) {
+				return new KInt(-findi(e1.getInner(), env));
+			}
+		} else if (e instanceof KAdd) {
+			KAdd e1 = (KAdd) e;
+			if (memi(e1.getLeft(), env) && memi(e1.getRight(), env)) {
+				return new KInt(findi(e1.getLeft(), env)
+						+ findi(e1.getRight(), env));
+			}
+		} else if (e instanceof KSub) {
+			KSub e1 = (KSub) e;
+			if (memi(e1.getLeft(), env) && memi(e1.getRight(), env)) {
+				return new KInt(findi(e1.getLeft(), env)
+						- findi(e1.getRight(), env));
+			}
+		} else if (e instanceof KFNeg) {
+			KFNeg e1 = (KFNeg) e;
+			if (memf(e1.getInner(), env)) {
+				return new KFloat(-findf(e1.getInner(), env));
+			}
+		} else if (e instanceof KFAdd) {
+			KFAdd e1 = (KFAdd) e;
+			if (memf(e1.getLeft(), env) && memf(e1.getRight(), env)) {
+				return new KFloat(findf(e1.getLeft(), env)
+						+ findf(e1.getRight(), env));
+			}
+		} else if (e instanceof KFSub) {
+			KFSub e1 = (KFSub) e;
+			if (memf(e1.getLeft(), env) && memf(e1.getRight(), env)) {
+				return new KFloat(findf(e1.getLeft(), env)
+						- findf(e1.getRight(), env));
+			}
+		} else if (e instanceof KFMul) {
+			KFMul e1 = (KFMul) e;
+			if (memf(e1.getLeft(), env) && memf(e1.getRight(), env)) {
+				return new KFloat(findf(e1.getLeft(), env)
+						* findf(e1.getRight(), env));
+			}
+		} else if (e instanceof KFDiv) {
+			KFDiv e1 = (KFDiv) e;
+			if (memf(e1.getLeft(), env) && memf(e1.getRight(), env)) {
+				return new KFloat(findf(e1.getLeft(), env)
+						/ findf(e1.getRight(), env));
+			}
+		} else if (e instanceof KIfEq) {
+			KIfEq e1 = (KIfEq) e;
+			if (memi(e1.getLeft(), env) && memi(e1.getRight(), env)) {
+				if (findi(e1.getLeft(), env) == findi(e1.getRight(), env)) {
+					return transform(e1.getTrueExpr(), env);
+				} else {
+					return transform(e1.getFalseExpr(), env);
+				}
+			}
+			if (memf(e1.getLeft(), env) && memf(e1.getRight(), env)) {
+				if (findf(e1.getLeft(), env) == findf(e1.getRight(), env)) {
+					return transform(e1.getTrueExpr(), env);
+				} else {
+					return transform(e1.getFalseExpr(), env);
+				}
+			}
+			return new KIfEq(e1.getLeft(), e1.getRight(), transform(
+					e1.getTrueExpr(), env), transform(e1.getFalseExpr(), env));
+		} else if (e instanceof KIfLe) {
+			KIfLe e1 = (KIfLe) e;
+			if (memi(e1.getLeft(), env) && memi(e1.getRight(), env)) {
+				if (findi(e1.getLeft(), env) <= findi(e1.getRight(), env)) {
+					return transform(e1.getTrueExpr(), env);
+				} else {
+					return transform(e1.getFalseExpr(), env);
+				}
+			}
+			if (memf(e1.getLeft(), env) && memf(e1.getRight(), env)) {
+				if (findf(e1.getLeft(), env) <= findf(e1.getRight(), env)) {
+					return transform(e1.getTrueExpr(), env);
+				} else {
+					return transform(e1.getFalseExpr(), env);
+				}
+			}
+			return new KIfLe(e1.getLeft(), e1.getRight(), transform(
+					e1.getTrueExpr(), env), transform(e1.getFalseExpr(), env));
+		} else if (e instanceof KLet) {
+			KLet e1 = (KLet) e;
+			KNormalExpr value = transform(e1.getValue(), env);
+			Map<String, KNormalExpr> newEnv = new HashMap<>(env);
+			env.put(e1.getVar().getLeft(), value);
+			KNormalExpr body = transform(e1.getBody(), newEnv);
+			return new KLet(e1.getVar(), value, body);
+		} else if (e instanceof KLetRec) {
+			KLetRec e1 = (KLetRec) e;
+			KFunDef funDef = e1.getFunDef();
+			return new KLetRec(new KFunDef(funDef.getName(),
+					funDef.getParams(), transform(funDef.getBody(), env)),
+					transform(e1.getBody(), env));
+		} else if (e instanceof KLetTuple) {
+			KLetTuple e1 = (KLetTuple) e;
+			if (memt(e1.getValue(), env)) {
+				List<Pair<String, Type>> vars = e1.getVars();
+				List<String> values = findt(e1.getValue(), env);
+				KNormalExpr body = transform(e1.getBody(), env);
+				KNormalExpr curr = body;
+				for (int i = vars.size() - 1; i >= 0; i--) {
+					curr = new KLet(vars.get(i), new KVar(values.get(i)), curr);
+				}
+				return curr;
+			} else {
+				return new KLetTuple(e1.getVars(), e1.getValue(), transform(
+						e1.getBody(), env));
+			}
+		}
+		return e;
 	}
 
 	public KNormalExpr transform(KNormalExpr e) {
-		return transform(e, new HashMap<String, String>());
+		return transform(e, new HashMap<String, KNormalExpr>());
 	}
 
 }
