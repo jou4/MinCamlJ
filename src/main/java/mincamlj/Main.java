@@ -3,6 +3,7 @@ package mincamlj;
 import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.nio.file.Path;
 
 import mincamlj.closure.CProg;
 import mincamlj.knormal.KNormalExpr;
@@ -18,9 +19,9 @@ public class Main {
 			return;
 		}
 
-		String path = args[0];
-		String code = new String(Files.readAllBytes(FileSystems.getDefault()
-				.getPath(path)));
+		Path path = FileSystems.getDefault()
+				.getPath(args[0]);
+		String code = new String(Files.readAllBytes(path));
 
 		SyntaxExpr e0 = new Parser().parse(code);
 		e0 = new Typing().typing(e0);
