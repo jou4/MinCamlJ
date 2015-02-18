@@ -13,16 +13,7 @@ public class Main {
 
 	private static final int limit = 1000;
 
-	public static void main(String[] args) throws IOException {
-		if (args.length == 0) {
-			System.err.println("file path is not passed.");
-			return;
-		}
-
-		Path path = FileSystems.getDefault()
-				.getPath(args[0]);
-		String code = new String(Files.readAllBytes(path));
-
+	public static CProg compile(String code) {
 		SyntaxExpr e0 = new Parser().parse(code);
 		e0 = new Typing().typing(e0);
 
@@ -37,7 +28,18 @@ public class Main {
 			e1 = new Elim().transform(e1);
 		}
 
-		CProg prog = new Closure().transform(e1);
+		return new Closure().transform(e1);
+	}
+
+	public static void main(String[] args) throws IOException {
+		if (args.length == 0) {
+			System.err.println("file path is not passed.");
+			return;
+		}
+
+		Path path = FileSystems.getDefault().getPath(args[0]);
+		String code = new String(Files.readAllBytes(path));
+		CProg prog = compile(code);
 		System.out.println(prog);
 	}
 
