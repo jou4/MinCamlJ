@@ -14,4 +14,7 @@ public class Prelude {
 		System.out.println(v);
 	}
 
+	public static void min_caml_print_tuple(Object o) {
+		System.out.println(o);
+	}
 }
