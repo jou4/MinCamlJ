@@ -65,6 +65,9 @@ public class Emit implements Opcodes {
 	};
 
 	private Class<?> t2c(Type t) {
+		if (t instanceof UnitType) {
+			return void.class;
+		}
 		if (t instanceof BoolType) {
 			return int.class;
 		} else if (t instanceof IntType) {
@@ -72,7 +75,7 @@ public class Emit implements Opcodes {
 		} else if (t instanceof FloatType) {
 			return float.class;
 		}
-		return void.class;
+		return Object.class;
 	}
 
 	private Object t2o(Type t) {
@@ -282,9 +285,9 @@ public class Emit implements Opcodes {
 				emitExpr(e1.getFalseExpr(), fState, env, cont);
 				// true
 				tState.getMv().visitLabel(branch);
-				tState.getMv().visitFrame(F_FULL, tState.getLocals().length,
-						tState.getLocals(), tState.getStack().length,
-						tState.getStack());
+				// tState.getMv().visitFrame(F_FULL, tState.getLocals().length,
+				// tState.getLocals(), tState.getStack().length,
+				// tState.getStack());
 
 				if (cont == defaultCont) {
 					emitExpr(e1.getTrueExpr(), tState, env, cont);
@@ -316,9 +319,9 @@ public class Emit implements Opcodes {
 				emitExpr(e1.getFalseExpr(), fState, env, cont);
 				// true
 				tState.getMv().visitLabel(branch);
-				tState.getMv().visitFrame(F_FULL, tState.getLocals().length,
-						tState.getLocals(), tState.getStack().length,
-						tState.getStack());
+				// tState.getMv().visitFrame(F_FULL, tState.getLocals().length,
+				// tState.getLocals(), tState.getStack().length,
+				// tState.getStack());
 				if (cont == defaultCont) {
 					emitExpr(e1.getTrueExpr(), tState, env, cont);
 				} else {
@@ -356,26 +359,28 @@ public class Emit implements Opcodes {
 				EmitState fState = st.newState();
 				EmitState tState = st.newState();
 				// false
-				emitExpr(e1.getFalseExpr(), fState, env, cont);
-				// true
-				tState.getMv().visitLabel(branch);
-				tState.getMv().visitFrame(F_FULL, tState.getLocals().length,
-						tState.getLocals(), tState.getStack().length,
-						tState.getStack());
-
 				if (cont == defaultCont) {
-					emitExpr(e1.getTrueExpr(), tState, env, cont);
+					emitExpr(e1.getFalseExpr(), fState, env, cont);
 				} else {
-					emitExpr(e1.getTrueExpr(), tState, env, (s, t) -> {
+					emitExpr(e1.getFalseExpr(), fState, env, (s, t) -> {
 						cont.accept(s, t);
 						s.getMv().visitJumpInsn(GOTO, end);
 					});
 				}
-
+				// true
+				tState.getMv().visitLabel(branch);
+				// tState.getMv().visitFrame(F_FULL, tState.getLocals().length,
+				// tState.getLocals(), tState.getStack().length,
+				// tState.getStack());
+				emitExpr(e1.getTrueExpr(), tState, env, cont);
+				tState.getMv().visitLabel(end);
 				st.setMaxStackIfLarge(Math.max(fState.getMaxStack(),
 						tState.getMaxStack()));
 				st.setLocalVarId(Math.max(fState.getLocalVarId(),
 						tState.getLocalVarId()));
+				// tState.getMv().visitFrame(F_FULL, st.getLocals().length,
+				// st.getLocals(), st.getStack().length,
+				// st.getStack());
 			} else if (t1 instanceof FloatType) {
 				st.getMv()
 						.visitVarInsn(FLOAD, env.get(e1.getLeft()).getRight());
@@ -390,20 +395,22 @@ public class Emit implements Opcodes {
 				EmitState fState = st.newState();
 				EmitState tState = st.newState();
 				// false
-				emitExpr(e1.getFalseExpr(), fState, env, cont);
-				// true
-				tState.getMv().visitLabel(branch);
-				tState.getMv().visitFrame(F_FULL, tState.getLocals().length,
-						tState.getLocals(), tState.getStack().length,
-						tState.getStack());
 				if (cont == defaultCont) {
-					emitExpr(e1.getTrueExpr(), tState, env, cont);
+					emitExpr(e1.getFalseExpr(), fState, env, cont);
 				} else {
-					emitExpr(e1.getTrueExpr(), tState, env, (s, t) -> {
+					emitExpr(e1.getFalseExpr(), fState, env, (s, t) -> {
 						cont.accept(s, t);
 						s.getMv().visitJumpInsn(GOTO, end);
 					});
 				}
+				emitExpr(e1.getFalseExpr(), fState, env, cont);
+				// true
+				tState.getMv().visitLabel(branch);
+				// tState.getMv().visitFrame(F_FULL, tState.getLocals().length,
+				// tState.getLocals(), tState.getStack().length,
+				// tState.getStack());
+				emitExpr(e1.getTrueExpr(), tState, env, cont);
+				st.getMv().visitLabel(end);
 
 				st.setMaxStackIfLarge(Math.max(fState.getMaxStack(),
 						tState.getMaxStack()));
@@ -453,6 +460,10 @@ public class Emit implements Opcodes {
 			emitExpr(e1.getBody(), st, newEnv, cont);
 		} else if (e instanceof CTuple) {
 			CTuple e1 = (CTuple) e;
+			st.getMv().visitTypeInsn(NEW, tupleName(e1.getValues().size()).replace('.', '/'));
+			st.pushStack(tupleName(e1.getValues().size()).replace('.', '/'));
+			st.getMv().visitInsn(DUP);
+			st.pushStack(tupleName(e1.getValues().size()).replace('.', '/'));
 			e1.getValues().forEach(
 					v -> {
 						Type t = env.get(v).getLeft();
@@ -476,8 +487,8 @@ public class Emit implements Opcodes {
 					});
 
 			st.getMv().visitMethodInsn(INVOKESPECIAL,
-					tupleName(e1.getValues().size()), "<init>",
-					tupleInitSig(e1.getValues().size()), false);
+					tupleName(e1.getValues().size()).replace('.', '/'),
+					"<init>", tupleInitSig(e1.getValues().size()), false);
 			st.consumeStack(e1.getValues().size() - 1);
 
 			cont.accept(
@@ -487,6 +498,38 @@ public class Emit implements Opcodes {
 							.collect(Collectors.toList())));
 		} else if (e instanceof CLetTuple) {
 			CLetTuple e1 = (CLetTuple) e;
+			Map<String, Pair<Type, Integer>> newEnv = new HashMap<>(env);
+			int tupleId = env.get(e1.getValue()).getRight();
+			for (int i = 0; i < e1.getVars().size(); i++) {
+				Pair<String, Type> var = e1.getVars().get(i);
+				int varId = st.newLocalVarId();
+				Type t = var.getRight();
+
+				st.getMv().visitVarInsn(ALOAD, tupleId);
+				st.pushStack("java/lang/Object");
+				st.getMv().visitMethodInsn(INVOKEVIRTUAL,
+						tupleName(e1.getVars().size()).replace('.', '/'),
+						"getVal" + (i + 1), "()Ljava/lang/Object;", false);
+				st.consumeStack(0);
+				if (t instanceof BoolType || t instanceof IntType) {
+					st.getMv().visitTypeInsn(CHECKCAST, "java/lang/Integer");
+					st.getMv().visitMethodInsn(INVOKEVIRTUAL,
+							"java/lang/Integer", "intValue", "()I", false);
+					st.consumeStack(0);
+					st.getMv().visitVarInsn(ISTORE, varId);
+					st.consumeStack(1);
+				} else if (t instanceof FloatType) {
+
+				} else {
+
+				}
+				st.addLocals(t2o(t));
+
+				newEnv.put(var.getLeft(), new Pair<>(t, varId));
+			}
+
+			emitExpr(e1.getBody(), st, newEnv, cont);
+
 		} else if (e instanceof CAppDir) {
 			CAppDir e1 = (CAppDir) e;
 			String fn = e1.getFunc().getName();
@@ -547,6 +590,9 @@ public class Emit implements Opcodes {
 		mv.visitCode();
 
 		EmitState st = new EmitState(mv);
+		st.newLocalVarId();
+		st.addLocals("[Ljava/lang/String;");
+
 		emitExpr(e, st, new HashMap<>(), defaultCont);
 
 		mv.visitMaxs(st.getMaxStack(), st.getMaxLocals());
@@ -567,8 +613,8 @@ public class Emit implements Opcodes {
 				f -> funcEnv.put(f.getName().getLeft().getName(), f.getName()
 						.getRight()));
 
-		ClassWriter cw = new ClassWriter(0);
-		// ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+		// ClassWriter cw = new ClassWriter(0);
+		ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
 		cw.visit(V1_8, ACC_PUBLIC + ACC_SUPER, className, null,
 				"java/lang/Object", null);
 

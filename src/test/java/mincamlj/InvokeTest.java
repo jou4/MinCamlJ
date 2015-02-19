@@ -30,7 +30,7 @@ public class InvokeTest {
 
 	@Test
 	public void test1() throws Exception {
-		String code = "let a = 1 in let b = 2 in let c = a + b in if a > c then print_int a else print_int c";
+		String code = "let a = 1 in let b = 2 in let c = (a, b) in let (d, e) = c in print_int e";
 		String className = "Test1";
 
 		CProg prog = Main.compile(code);
@@ -42,6 +42,16 @@ public class InvokeTest {
 		out.write(bytes);
 		out.flush();
 		out.close();
+	}
+
+	public static void main(String[] args) {
+		
+		int a = 1;
+		int b = 2;
+		Tuple2<Integer, Integer> t2 = new Tuple2<Integer, Integer>(a, b);
+		int d = t2.getVal1();
+		int e = t2.getVal2();
+		System.out.println(e);
 	}
 
 }
