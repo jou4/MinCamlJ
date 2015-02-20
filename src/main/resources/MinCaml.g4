@@ -32,7 +32,7 @@ COMMA : ',';
 DOT : '.';
 LESS_MINUS : '<-';
 SEMICOLON : ';';
-ARRAY_CREATE : 'Array.create';
+ARRAY_CREATE : 'Array.make';
 INT : DIGIT+;
 FLOAT : DIGIT+ ('.' DIGIT*)? (['e' 'E'] ['+' '-']? DIGIT+)?;
 IDENT : (LOWER (DIGIT|LOWER|UPPER|'_')*) | '_';

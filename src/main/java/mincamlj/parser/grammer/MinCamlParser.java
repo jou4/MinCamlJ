@@ -31,7 +31,7 @@ public class MinCamlParser extends Parser {
 	private static final String[] _LITERAL_NAMES = {
 		null, "'if'", "'then'", "'else'", "'let'", "'in'", "'rec'", "'not'", null, 
 		"'('", "')'", "'+'", "'-'", "'+.'", "'-.'", "'*.'", "'/.'", "'='", "'<>'", 
-		"'<='", "'>='", "'<'", "'>'", "','", "'.'", "'<-'", "';'", "'Array.create'"
+		"'<='", "'>='", "'<'", "'>'", "','", "'.'", "'<-'", "';'", "'Array.make'"
 	};
 	private static final String[] _SYMBOLIC_NAMES = {
 		null, "IF", "THEN", "ELSE", "LET", "IN", "REC", "NOT", "BOOL", "LPAREN", 

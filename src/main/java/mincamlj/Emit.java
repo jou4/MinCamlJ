@@ -34,6 +34,7 @@ import mincamlj.closure.CTuple;
 import mincamlj.closure.CUnit;
 import mincamlj.closure.CVar;
 import mincamlj.closure.ClosureExpr;
+import mincamlj.type.ArrayType;
 import mincamlj.type.BoolType;
 import mincamlj.type.FloatType;
 import mincamlj.type.FunType;
@@ -74,6 +75,13 @@ public class Emit implements Opcodes {
 			return int.class;
 		} else if (t instanceof FloatType) {
 			return float.class;
+		} else if (t instanceof ArrayType) {
+			ArrayType at = (ArrayType) t;
+			if (at.getInner() instanceof FloatType) {
+				return float[].class;
+			} else {
+				return int[].class;
+			}
 		}
 		return Object.class;
 	}
@@ -85,6 +93,13 @@ public class Emit implements Opcodes {
 			return INTEGER;
 		} else if (t instanceof FloatType) {
 			return FLOAT;
+		} else if (t instanceof ArrayType) {
+			ArrayType at = (ArrayType) t;
+			if (at.getInner() instanceof FloatType) {
+				return "[F";
+			} else {
+				return "[I";
+			}
 		}
 		return "java/lang/Object";
 	}
@@ -460,7 +475,8 @@ public class Emit implements Opcodes {
 			emitExpr(e1.getBody(), st, newEnv, cont);
 		} else if (e instanceof CTuple) {
 			CTuple e1 = (CTuple) e;
-			st.getMv().visitTypeInsn(NEW, tupleName(e1.getValues().size()).replace('.', '/'));
+			st.getMv().visitTypeInsn(NEW,
+					tupleName(e1.getValues().size()).replace('.', '/'));
 			st.pushStack(tupleName(e1.getValues().size()).replace('.', '/'));
 			st.getMv().visitInsn(DUP);
 			st.pushStack(tupleName(e1.getValues().size()).replace('.', '/'));
@@ -573,8 +589,46 @@ public class Emit implements Opcodes {
 			CMakeCls e1 = (CMakeCls) e;
 		} else if (e instanceof CGet) {
 			CGet e1 = (CGet) e;
+			Type t = ((ArrayType) env.get(e1.getArray()).getLeft()).getInner();
+			int varId = env.get(e1.getArray()).getRight();
+			st.getMv().visitVarInsn(ALOAD, varId);
+			st.pushStack(t2o(t));
+			st.getMv().visitVarInsn(ILOAD, env.get(e1.getIndex()).getRight());
+			st.pushStack(t2o(IntType.getInstance()));
+			if (t instanceof BoolType || t instanceof IntType) {
+				st.getMv().visitInsn(IALOAD);
+				st.consumeStack(1);
+			} else if (t instanceof FloatType) {
+				st.getMv().visitInsn(FALOAD);
+				st.consumeStack(1);
+			} else {
+				throw new RuntimeException();
+			}
+			cont.accept(st, t);
 		} else if (e instanceof CPut) {
 			CPut e1 = (CPut) e;
+			Type t = ((ArrayType) env.get(e1.getArray()).getLeft()).getInner();
+			int varId = env.get(e1.getArray()).getRight();
+			st.getMv().visitVarInsn(ALOAD, varId);
+			st.pushStack(t2o(t));
+			st.getMv().visitVarInsn(ILOAD, env.get(e1.getIndex()).getRight());
+			st.pushStack(t2o(IntType.getInstance()));
+			if (t instanceof BoolType || t instanceof IntType) {
+				st.getMv().visitVarInsn(ILOAD,
+						env.get(e1.getValue()).getRight());
+				st.pushStack(t2o(t));
+				st.getMv().visitInsn(IASTORE);
+				st.consumeStack(2);
+			} else if (t instanceof FloatType) {
+				st.getMv().visitVarInsn(FLOAD,
+						env.get(e1.getValue()).getRight());
+				st.pushStack(t2o(t));
+				st.getMv().visitInsn(FASTORE);
+				st.consumeStack(2);
+			} else {
+				throw new RuntimeException();
+			}
+			//cont.accept(st, t);
 		} else if (e instanceof CExtArray) {
 			CExtArray e1 = (CExtArray) e;
 		}

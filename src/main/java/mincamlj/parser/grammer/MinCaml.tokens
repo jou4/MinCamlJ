@@ -54,4 +54,4 @@ WHITESPACE=31
 '.'=24
 '<-'=25
 ';'=26
-'Array.create'=27
+'Array.make'=27

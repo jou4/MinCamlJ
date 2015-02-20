@@ -180,7 +180,7 @@ public class Typing {
 			return t2_.getInners().stream().anyMatch(i -> occur(t1, i));
 		} else if (t2 instanceof ArrayType) {
 			ArrayType t2_ = (ArrayType) t2;
-			return occur(t1, t2_);
+			return occur(t1, t2_.getInner());
 		} else if (t2 instanceof VarType) {
 			VarType t2_ = (VarType) t2;
 			if (t1 == t2_) {
@@ -443,7 +443,6 @@ public class Typing {
 	public static Map<String, Type> extEnv;
 
 	public SyntaxExpr typing(SyntaxExpr e) {
-		extEnv = new HashMap<>();
 		Map<String, Type> env = new HashMap<>();
 		try {
 			unify(UnitType.getInstance(), infer(e, env));
