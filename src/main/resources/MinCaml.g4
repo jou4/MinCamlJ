@@ -34,7 +34,7 @@ LESS_MINUS : '<-';
 SEMICOLON : ';';
 ARRAY_CREATE : 'Array.make';
 INT : DIGIT+;
-FLOAT : DIGIT+ ('.' DIGIT*)? (['e' 'E'] ['+' '-']? DIGIT+)?;
+FLOAT : DIGIT+ (DOT DIGIT*)? ([eE] [+-]? DIGIT+)?;
 IDENT : (LOWER (DIGIT|LOWER|UPPER|'_')*) | '_';
 WHITESPACE : [ \t\r\n]+ -> skip;
 
