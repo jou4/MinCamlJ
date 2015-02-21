@@ -39,13 +39,13 @@ public class Main {
 		KNormalExpr e1 = new KNormal().transform(e0);
 		e1 = new Alpha().transform(e1);
 
-		for (int i = 0; i < limit; i++) {
-			e1 = new Beta().transform(e1);
-			e1 = new Assoc().transform(e1);
-			e1 = new Inline().transform(e1);
-			e1 = new ConstFold().transform(e1);
-			e1 = new Elim().transform(e1);
-		}
+//		for (int i = 0; i < limit; i++) {
+//			e1 = new Beta().transform(e1);
+//			e1 = new Assoc().transform(e1);
+//			e1 = new Inline().transform(e1);
+//			e1 = new ConstFold().transform(e1);
+//			e1 = new Elim().transform(e1);
+//		}
 
 		return new Closure().transform(e1);
 	}

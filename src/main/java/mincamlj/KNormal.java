@@ -471,7 +471,7 @@ public class KNormal {
 					normalize(args.get(0), env),
 					x -> {
 						newArgs.add(x);
-						return bindExtFunApp(returnType, f,
+						return bindApp(returnType, f,
 								args.subList(1, args.size()), newArgs, env);
 					});
 		}

@@ -10,7 +10,7 @@ public class Prelude {
 		System.out.println(v);
 	}
 
-	public static void min_caml_print_float(float v) {
+	public static void min_caml_print_float(double v) {
 		System.out.println(v);
 	}
 
@@ -26,8 +26,8 @@ public class Prelude {
 		return array;
 	}
 
-	public static float[] min_caml_create_float_array(int n, float initialize) {
-		float[] array = new float[n];
+	public static double[] min_caml_create_float_array(int n, double initialize) {
+		double[] array = new double[n];
 		for (int i = 0; i < array.length; i++) {
 			array[i] = initialize;
 		}

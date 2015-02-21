@@ -100,7 +100,7 @@ public class Alpha {
 			funDef.getParams().forEach(
 					p -> newEnv2.put(p.getLeft(), Id.genId(p.getLeft())));
 			return new KLetRec(new KFunDef(new Pair<String, Type>(find(funDef
-					.getName().getLeft(), env), funDef.getName().getRight()),
+					.getName().getLeft(), newEnv), funDef.getName().getRight()),
 					funDef.getParams()
 							.stream()
 							.map(p -> new Pair<>(find(p.getLeft(), newEnv2), p

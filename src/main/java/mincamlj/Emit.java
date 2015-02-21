@@ -59,7 +59,7 @@ public class Emit implements Opcodes {
 		} else if (t instanceof IntType) {
 			st.getMv().visitInsn(IRETURN);
 		} else if (t instanceof FloatType) {
-			st.getMv().visitInsn(FRETURN);
+			st.getMv().visitInsn(DRETURN);
 		} else {
 			st.getMv().visitInsn(ARETURN);
 		}
@@ -68,40 +68,21 @@ public class Emit implements Opcodes {
 	private Class<?> t2c(Type t) {
 		if (t instanceof UnitType) {
 			return void.class;
-		}
-		if (t instanceof BoolType) {
+		} else if (t instanceof BoolType) {
 			return int.class;
 		} else if (t instanceof IntType) {
 			return int.class;
 		} else if (t instanceof FloatType) {
-			return float.class;
+			return double.class;
 		} else if (t instanceof ArrayType) {
 			ArrayType at = (ArrayType) t;
 			if (at.getInner() instanceof FloatType) {
-				return float[].class;
+				return double[].class;
 			} else {
 				return int[].class;
 			}
 		}
 		return Object.class;
-	}
-
-	private Object t2o(Type t) {
-		if (t instanceof BoolType) {
-			return INTEGER;
-		} else if (t instanceof IntType) {
-			return INTEGER;
-		} else if (t instanceof FloatType) {
-			return FLOAT;
-		} else if (t instanceof ArrayType) {
-			ArrayType at = (ArrayType) t;
-			if (at.getInner() instanceof FloatType) {
-				return "[F";
-			} else {
-				return "[I";
-			}
-		}
-		return "java/lang/Object";
 	}
 
 	private String tupleName(int size) {
@@ -122,78 +103,44 @@ public class Emit implements Opcodes {
 		private MethodVisitor mv;
 		private int localVarId = 0;
 		private int maxStack = 0;
+		private int curStack = 0;
 
-		private List<Object> locals;
-		private List<Object> stack;
+		public EmitState() {
+			super();
+		}
 
 		public EmitState(MethodVisitor mv) {
 			super();
 			this.mv = mv;
-			this.locals = new ArrayList<Object>();
-			this.stack = new ArrayList<Object>();
 		}
 
-		public EmitState(MethodVisitor mv, int localVarId, int maxStack,
-				List<Object> locals, List<Object> stack) {
-			super();
+		public void setMv(MethodVisitor mv) {
 			this.mv = mv;
-			this.localVarId = localVarId;
-			this.maxStack = maxStack;
-			this.locals = new ArrayList<Object>(locals);
-			this.stack = new ArrayList<Object>(stack);
-		}
-
-		public EmitState newState() {
-			return new EmitState(mv, localVarId, maxStack, locals, stack);
 		}
 
 		public MethodVisitor getMv() {
 			return mv;
 		}
 
-		public void setLocalVarId(int varId) {
-			localVarId = varId;
-		}
-
-		public int getLocalVarId() {
-			return localVarId;
-		}
-
 		public int newLocalVarId() {
 			return localVarId++;
 		}
 
-		public void addLocals(Object o) {
-			locals.add(o);
+		public void pushStack() {
+			curStack++;
+			maxStack = Math.max(maxStack, curStack);
 		}
 
-		public void pushStack(Object o) {
-			stack.add(o);
-			maxStack = Math.max(maxStack, stack.size());
-		}
-
-		public void consumeStack(int num) {
-			stack = stack.subList(0, stack.size() - num);
+		public void consumeStack(int consume, int ret) {
+			curStack = curStack - consume + ret;
 		}
 
 		public int getMaxLocals() {
 			return localVarId;
 		}
 
-		public void setMaxStackIfLarge(int num) {
-			maxStack = Math.max(maxStack, num);
-		}
-
 		public int getMaxStack() {
 			return maxStack;
-		}
-
-		public Object[] getLocals() {
-			return locals.toArray();
-		}
-
-		public Object[] getStack() {
-			return stack.toArray();
 		}
 	}
 
@@ -205,78 +152,80 @@ public class Emit implements Opcodes {
 		} else if (e instanceof CInt) {
 			CInt e1 = (CInt) e;
 			st.getMv().visitLdcInsn(new Integer(e1.getValue()));
-			st.pushStack(INTEGER);
+			st.pushStack();
 			cont.accept(st, IntType.getInstance());
 		} else if (e instanceof CFloat) {
 			CFloat e1 = (CFloat) e;
-			st.getMv().visitLdcInsn(new Float(e1.getValue()));
-			st.pushStack(FLOAT);
+			st.getMv().visitLdcInsn(new Double(e1.getValue()));
+			st.pushStack();
 			cont.accept(st, FloatType.getInstance());
 		} else if (e instanceof CNeg) {
 			CNeg e1 = (CNeg) e;
 			st.getMv().visitVarInsn(ILOAD, env.get(e1.getInner()).getRight());
-			st.pushStack(INTEGER);
+			st.pushStack();
 			st.getMv().visitInsn(INEG);
+			st.consumeStack(1, 1);
 			cont.accept(st, IntType.getInstance());
 		} else if (e instanceof CAdd) {
 			CAdd e1 = (CAdd) e;
 			st.getMv().visitVarInsn(ILOAD, env.get(e1.getLeft()).getRight());
-			st.pushStack(INTEGER);
+			st.pushStack();
 			st.getMv().visitVarInsn(ILOAD, env.get(e1.getRight()).getRight());
-			st.pushStack(INTEGER);
+			st.pushStack();
 			st.getMv().visitInsn(IADD);
-			st.consumeStack(1);
+			st.consumeStack(2, 1);
 			cont.accept(st, IntType.getInstance());
 		} else if (e instanceof CSub) {
 			CSub e1 = (CSub) e;
 			st.getMv().visitVarInsn(ILOAD, env.get(e1.getLeft()).getRight());
-			st.pushStack(INTEGER);
+			st.pushStack();
 			st.getMv().visitVarInsn(ILOAD, env.get(e1.getRight()).getRight());
-			st.pushStack(INTEGER);
+			st.pushStack();
 			st.getMv().visitInsn(ISUB);
-			st.consumeStack(1);
+			st.consumeStack(2, 1);
 			cont.accept(st, IntType.getInstance());
 		} else if (e instanceof CFNeg) {
 			CFNeg e1 = (CFNeg) e;
-			st.getMv().visitVarInsn(FLOAD, env.get(e1.getInner()).getRight());
-			st.pushStack(FLOAT);
-			st.getMv().visitInsn(FNEG);
+			st.getMv().visitVarInsn(DLOAD, env.get(e1.getInner()).getRight());
+			st.pushStack();
+			st.getMv().visitInsn(DNEG);
+			st.consumeStack(1, 1);
 			cont.accept(st, FloatType.getInstance());
 		} else if (e instanceof CFAdd) {
 			CFAdd e1 = (CFAdd) e;
-			st.getMv().visitVarInsn(FLOAD, env.get(e1.getLeft()).getRight());
-			st.pushStack(FLOAT);
-			st.getMv().visitVarInsn(FLOAD, env.get(e1.getRight()).getRight());
-			st.pushStack(FLOAT);
-			st.getMv().visitInsn(FADD);
-			st.consumeStack(1);
+			st.getMv().visitVarInsn(DLOAD, env.get(e1.getLeft()).getRight());
+			st.pushStack();
+			st.getMv().visitVarInsn(DLOAD, env.get(e1.getRight()).getRight());
+			st.pushStack();
+			st.getMv().visitInsn(DADD);
+			st.consumeStack(2, 1);
 			cont.accept(st, FloatType.getInstance());
 		} else if (e instanceof CFSub) {
 			CFSub e1 = (CFSub) e;
-			st.getMv().visitVarInsn(FLOAD, env.get(e1.getLeft()).getRight());
-			st.pushStack(FLOAT);
-			st.getMv().visitVarInsn(FLOAD, env.get(e1.getRight()).getRight());
-			st.pushStack(FLOAT);
-			st.getMv().visitInsn(FSUB);
-			st.consumeStack(1);
+			st.getMv().visitVarInsn(DLOAD, env.get(e1.getLeft()).getRight());
+			st.pushStack();
+			st.getMv().visitVarInsn(DLOAD, env.get(e1.getRight()).getRight());
+			st.pushStack();
+			st.getMv().visitInsn(DSUB);
+			st.consumeStack(2, 1);
 			cont.accept(st, FloatType.getInstance());
 		} else if (e instanceof CFMul) {
 			CFMul e1 = (CFMul) e;
-			st.getMv().visitVarInsn(FLOAD, env.get(e1.getLeft()).getRight());
-			st.pushStack(FLOAT);
-			st.getMv().visitVarInsn(FLOAD, env.get(e1.getRight()).getRight());
-			st.pushStack(FLOAT);
-			st.getMv().visitInsn(FMUL);
-			st.consumeStack(1);
+			st.getMv().visitVarInsn(DLOAD, env.get(e1.getLeft()).getRight());
+			st.pushStack();
+			st.getMv().visitVarInsn(DLOAD, env.get(e1.getRight()).getRight());
+			st.pushStack();
+			st.getMv().visitInsn(DMUL);
+			st.consumeStack(2, 1);
 			cont.accept(st, FloatType.getInstance());
 		} else if (e instanceof CFDiv) {
 			CFDiv e1 = (CFDiv) e;
-			st.getMv().visitVarInsn(FLOAD, env.get(e1.getLeft()).getRight());
-			st.pushStack(FLOAT);
-			st.getMv().visitVarInsn(FLOAD, env.get(e1.getRight()).getRight());
-			st.pushStack(FLOAT);
-			st.getMv().visitInsn(FDIV);
-			st.consumeStack(1);
+			st.getMv().visitVarInsn(DLOAD, env.get(e1.getLeft()).getRight());
+			st.pushStack();
+			st.getMv().visitVarInsn(DLOAD, env.get(e1.getRight()).getRight());
+			st.pushStack();
+			st.getMv().visitInsn(DDIV);
+			st.consumeStack(2, 1);
 			cont.accept(st, FloatType.getInstance());
 		} else if (e instanceof CIfEq) {
 			CIfEq e1 = (CIfEq) e;
@@ -286,70 +235,50 @@ public class Emit implements Opcodes {
 			if (t1 instanceof BoolType || t1 instanceof IntType) {
 				st.getMv()
 						.visitVarInsn(ILOAD, env.get(e1.getLeft()).getRight());
-				st.pushStack(INTEGER);
+				st.pushStack();
 				st.getMv().visitVarInsn(ILOAD,
 						env.get(e1.getRight()).getRight());
-				st.pushStack(INTEGER);
+				st.pushStack();
 				st.getMv().visitInsn(ISUB);
-				st.consumeStack(1);
+				st.consumeStack(2, 1);
 				st.getMv().visitJumpInsn(IFEQ, branch);
-				st.consumeStack(1);
-				EmitState fState = st.newState();
-				EmitState tState = st.newState();
+				st.consumeStack(1, 0);
 				// false
-				emitExpr(e1.getFalseExpr(), fState, env, cont);
+				emitExpr(e1.getFalseExpr(), st, env, cont);
 				// true
-				tState.getMv().visitLabel(branch);
-				// tState.getMv().visitFrame(F_FULL, tState.getLocals().length,
-				// tState.getLocals(), tState.getStack().length,
-				// tState.getStack());
+				st.getMv().visitLabel(branch);
 
 				if (cont == defaultCont) {
-					emitExpr(e1.getTrueExpr(), tState, env, cont);
+					emitExpr(e1.getTrueExpr(), st, env, cont);
 				} else {
-					emitExpr(e1.getTrueExpr(), tState, env, (s, t) -> {
+					emitExpr(e1.getTrueExpr(), st, env, (s, t) -> {
 						cont.accept(s, t);
 						s.getMv().visitJumpInsn(GOTO, end);
 					});
 				}
-
-				st.setMaxStackIfLarge(Math.max(fState.getMaxStack(),
-						tState.getMaxStack()));
-				st.setLocalVarId(Math.max(fState.getLocalVarId(),
-						tState.getLocalVarId()));
 			} else if (t1 instanceof FloatType) {
 				st.getMv()
-						.visitVarInsn(FLOAD, env.get(e1.getLeft()).getRight());
-				st.pushStack(FLOAT);
-				st.getMv().visitVarInsn(FLOAD,
+						.visitVarInsn(DLOAD, env.get(e1.getLeft()).getRight());
+				st.pushStack();
+				st.getMv().visitVarInsn(DLOAD,
 						env.get(e1.getRight()).getRight());
-				st.pushStack(FLOAT);
-				st.getMv().visitInsn(FSUB);
-				st.consumeStack(1);
+				st.pushStack();
+				st.getMv().visitInsn(DSUB);
+				st.consumeStack(2, 1);
 				st.getMv().visitJumpInsn(IFEQ, branch);
-				st.consumeStack(1);
-				EmitState fState = st.newState();
-				EmitState tState = st.newState();
+				st.consumeStack(1, 0);
 				// false
-				emitExpr(e1.getFalseExpr(), fState, env, cont);
+				emitExpr(e1.getFalseExpr(), st, env, cont);
 				// true
-				tState.getMv().visitLabel(branch);
-				// tState.getMv().visitFrame(F_FULL, tState.getLocals().length,
-				// tState.getLocals(), tState.getStack().length,
-				// tState.getStack());
+				st.getMv().visitLabel(branch);
 				if (cont == defaultCont) {
-					emitExpr(e1.getTrueExpr(), tState, env, cont);
+					emitExpr(e1.getTrueExpr(), st, env, cont);
 				} else {
-					emitExpr(e1.getTrueExpr(), tState, env, (s, t) -> {
+					emitExpr(e1.getTrueExpr(), st, env, (s, t) -> {
 						cont.accept(s, t);
 						s.getMv().visitJumpInsn(GOTO, end);
 					});
 				}
-
-				st.setMaxStackIfLarge(Math.max(fState.getMaxStack(),
-						tState.getMaxStack()));
-				st.setLocalVarId(Math.max(fState.getLocalVarId(),
-						tState.getLocalVarId()));
 			} else {
 				throw new RuntimeException(
 						"equality supported only for bool, int, and float");
@@ -363,74 +292,52 @@ public class Emit implements Opcodes {
 			if (t1 instanceof BoolType || t1 instanceof IntType) {
 				st.getMv()
 						.visitVarInsn(ILOAD, env.get(e1.getLeft()).getRight());
-				st.pushStack(INTEGER);
+				st.pushStack();
 				st.getMv().visitVarInsn(ILOAD,
 						env.get(e1.getRight()).getRight());
-				st.pushStack(INTEGER);
+				st.pushStack();
 				st.getMv().visitInsn(ISUB);
-				st.consumeStack(1);
+				st.consumeStack(2, 1);
 				st.getMv().visitJumpInsn(IFLE, branch);
-				st.consumeStack(1);
-				EmitState fState = st.newState();
-				EmitState tState = st.newState();
+				st.consumeStack(1, 0);
 				// false
 				if (cont == defaultCont) {
-					emitExpr(e1.getFalseExpr(), fState, env, cont);
+					emitExpr(e1.getFalseExpr(), st, env, cont);
 				} else {
-					emitExpr(e1.getFalseExpr(), fState, env, (s, t) -> {
+					emitExpr(e1.getFalseExpr(), st, env, (s, t) -> {
 						cont.accept(s, t);
 						s.getMv().visitJumpInsn(GOTO, end);
 					});
 				}
 				// true
-				tState.getMv().visitLabel(branch);
-				// tState.getMv().visitFrame(F_FULL, tState.getLocals().length,
-				// tState.getLocals(), tState.getStack().length,
-				// tState.getStack());
-				emitExpr(e1.getTrueExpr(), tState, env, cont);
-				tState.getMv().visitLabel(end);
-				st.setMaxStackIfLarge(Math.max(fState.getMaxStack(),
-						tState.getMaxStack()));
-				st.setLocalVarId(Math.max(fState.getLocalVarId(),
-						tState.getLocalVarId()));
-				// tState.getMv().visitFrame(F_FULL, st.getLocals().length,
-				// st.getLocals(), st.getStack().length,
-				// st.getStack());
+				st.getMv().visitLabel(branch);
+				emitExpr(e1.getTrueExpr(), st, env, cont);
+				st.getMv().visitLabel(end);
 			} else if (t1 instanceof FloatType) {
 				st.getMv()
-						.visitVarInsn(FLOAD, env.get(e1.getLeft()).getRight());
-				st.pushStack(FLOAT);
-				st.getMv().visitVarInsn(FLOAD,
+						.visitVarInsn(DLOAD, env.get(e1.getLeft()).getRight());
+				st.pushStack();
+				st.getMv().visitVarInsn(DLOAD,
 						env.get(e1.getRight()).getRight());
-				st.pushStack(FLOAT);
-				st.getMv().visitInsn(FSUB);
-				st.consumeStack(1);
+				st.pushStack();
+				st.getMv().visitInsn(DSUB);
+				st.consumeStack(2, 1);
 				st.getMv().visitJumpInsn(IFEQ, branch);
-				st.consumeStack(1);
-				EmitState fState = st.newState();
-				EmitState tState = st.newState();
+				st.consumeStack(1, 0);
 				// false
 				if (cont == defaultCont) {
-					emitExpr(e1.getFalseExpr(), fState, env, cont);
+					emitExpr(e1.getFalseExpr(), st, env, cont);
 				} else {
-					emitExpr(e1.getFalseExpr(), fState, env, (s, t) -> {
+					emitExpr(e1.getFalseExpr(), st, env, (s, t) -> {
 						cont.accept(s, t);
 						s.getMv().visitJumpInsn(GOTO, end);
 					});
 				}
-				emitExpr(e1.getFalseExpr(), fState, env, cont);
+				emitExpr(e1.getFalseExpr(), st, env, cont);
 				// true
-				tState.getMv().visitLabel(branch);
-				// tState.getMv().visitFrame(F_FULL, tState.getLocals().length,
-				// tState.getLocals(), tState.getStack().length,
-				// tState.getStack());
-				emitExpr(e1.getTrueExpr(), tState, env, cont);
+				st.getMv().visitLabel(branch);
+				emitExpr(e1.getTrueExpr(), st, env, cont);
 				st.getMv().visitLabel(end);
-
-				st.setMaxStackIfLarge(Math.max(fState.getMaxStack(),
-						tState.getMaxStack()));
-				st.setLocalVarId(Math.max(fState.getLocalVarId(),
-						tState.getLocalVarId()));
 			} else {
 				throw new RuntimeException(
 						"equality supported only for bool, int, and float");
@@ -442,13 +349,13 @@ public class Emit implements Opcodes {
 			int varId = env.get(e1.getName()).getRight();
 			if (t instanceof IntType) {
 				st.getMv().visitVarInsn(ILOAD, varId);
-				st.pushStack(t2o(t));
+				st.pushStack();
 			} else if (t instanceof FloatType) {
-				st.getMv().visitVarInsn(FLOAD, varId);
-				st.pushStack(t2o(t));
+				st.getMv().visitVarInsn(DLOAD, varId);
+				st.pushStack();
 			} else {
 				st.getMv().visitVarInsn(ALOAD, varId);
-				st.pushStack(t2o(t));
+				st.pushStack();
 			}
 			cont.accept(st, t);
 		} else if (e instanceof CLet) {
@@ -457,29 +364,27 @@ public class Emit implements Opcodes {
 			emitExpr(e1.getValue(), st, env, (s, t) -> {
 				if (t instanceof UnitType) {
 					// do nothing
+					return;
 				} else if (t instanceof IntType) {
 					s.getMv().visitVarInsn(ISTORE, varId);
-					s.consumeStack(1);
 				} else if (t instanceof FloatType) {
-					s.getMv().visitVarInsn(FSTORE, varId);
-					s.consumeStack(1);
+					s.getMv().visitVarInsn(DSTORE, varId);
 				} else {
 					s.getMv().visitVarInsn(ASTORE, varId);
-					s.consumeStack(1);
 				}
+				s.consumeStack(1, 0);
 			});
 			Map<String, Pair<Type, Integer>> newEnv = new HashMap<>(env);
 			newEnv.put(e1.getVar().getLeft(), new Pair<Type, Integer>(e1
 					.getVar().getRight(), varId));
-			st.addLocals(t2o(e1.getVar().getRight()));
 			emitExpr(e1.getBody(), st, newEnv, cont);
 		} else if (e instanceof CTuple) {
 			CTuple e1 = (CTuple) e;
 			st.getMv().visitTypeInsn(NEW,
 					tupleName(e1.getValues().size()).replace('.', '/'));
-			st.pushStack(tupleName(e1.getValues().size()).replace('.', '/'));
+			st.pushStack();
 			st.getMv().visitInsn(DUP);
-			st.pushStack(tupleName(e1.getValues().size()).replace('.', '/'));
+			st.pushStack();
 			e1.getValues().forEach(
 					v -> {
 						Type t = env.get(v).getLeft();
@@ -489,24 +394,23 @@ public class Emit implements Opcodes {
 							st.getMv().visitMethodInsn(INVOKESTATIC,
 									"java/lang/Integer", "valueOf",
 									"(I)Ljava/lang/Integer;", false);
-							st.pushStack("java/lang/Integer");
+							st.pushStack();
 						} else if (t instanceof FloatType) {
-							st.getMv().visitVarInsn(FLOAD, varId);
+							st.getMv().visitVarInsn(DLOAD, varId);
 							st.getMv().visitMethodInsn(INVOKESTATIC,
 									"java/lang/Float", "valueOf",
 									"(F)Ljava/lang/Float;", false);
-							st.pushStack("java/lang/Float");
+							st.pushStack();
 						} else {
 							st.getMv().visitVarInsn(ALOAD, varId);
-							st.pushStack(t2o(t));
+							st.pushStack();
 						}
 					});
-
+			// make tuple
 			st.getMv().visitMethodInsn(INVOKESPECIAL,
 					tupleName(e1.getValues().size()).replace('.', '/'),
 					"<init>", tupleInitSig(e1.getValues().size()), false);
-			st.consumeStack(e1.getValues().size() - 1);
-
+			st.consumeStack(e1.getValues().size(), 1);
 			cont.accept(
 					st,
 					new TupleType(e1.getValues().stream()
@@ -520,32 +424,38 @@ public class Emit implements Opcodes {
 				Pair<String, Type> var = e1.getVars().get(i);
 				int varId = st.newLocalVarId();
 				Type t = var.getRight();
-
 				st.getMv().visitVarInsn(ALOAD, tupleId);
-				st.pushStack("java/lang/Object");
+				st.pushStack();
+				st.getMv().visitTypeInsn(CHECKCAST,
+						tupleName(e1.getVars().size()).replace('.', '/'));
+				st.consumeStack(1, 1);
 				st.getMv().visitMethodInsn(INVOKEVIRTUAL,
 						tupleName(e1.getVars().size()).replace('.', '/'),
 						"getVal" + (i + 1), "()Ljava/lang/Object;", false);
-				st.consumeStack(0);
+				st.consumeStack(1, 1);
 				if (t instanceof BoolType || t instanceof IntType) {
 					st.getMv().visitTypeInsn(CHECKCAST, "java/lang/Integer");
 					st.getMv().visitMethodInsn(INVOKEVIRTUAL,
 							"java/lang/Integer", "intValue", "()I", false);
-					st.consumeStack(0);
+					st.consumeStack(1, 1);
 					st.getMv().visitVarInsn(ISTORE, varId);
-					st.consumeStack(1);
+					st.consumeStack(1, 0);
 				} else if (t instanceof FloatType) {
-
+					st.getMv().visitTypeInsn(CHECKCAST, "java/lang/Float");
+					st.getMv().visitMethodInsn(INVOKEVIRTUAL,
+							"java/lang/Float", "floatValue", "()I", false);
+					st.consumeStack(1, 1);
+					st.getMv().visitVarInsn(DSTORE, varId);
+					st.consumeStack(1, 0);
 				} else {
-
+					st.getMv().visitVarInsn(ASTORE, varId);
+					st.consumeStack(1, 0);
 				}
-				st.addLocals(t2o(t));
 
 				newEnv.put(var.getLeft(), new Pair<>(t, varId));
 			}
 
 			emitExpr(e1.getBody(), st, newEnv, cont);
-
 		} else if (e instanceof CAppDir) {
 			CAppDir e1 = (CAppDir) e;
 			String fn = e1.getFunc().getName();
@@ -569,19 +479,19 @@ public class Emit implements Opcodes {
 				int varId = env.get(a).getRight();
 				if (t instanceof IntType) {
 					st.getMv().visitVarInsn(ILOAD, varId);
-					st.pushStack(t2o(t));
+					st.pushStack();
 				} else if (t instanceof FloatType) {
-					st.getMv().visitVarInsn(FLOAD, varId);
-					st.pushStack(t2o(t));
+					st.getMv().visitVarInsn(DLOAD, varId);
+					st.pushStack();
 				} else {
 					st.getMv().visitVarInsn(ALOAD, varId);
-					st.pushStack(t2o(t));
+					st.pushStack();
 				}
 			}
 
 			st.getMv().visitMethodInsn(INVOKESTATIC, cls.replace('.', '/'), fn,
 					mt.toMethodDescriptorString(), false);
-			st.consumeStack(ft.getParams().size() - 1);
+			st.consumeStack(ft.getParams().size(), 1);
 			cont.accept(st, ft.getReturned());
 		} else if (e instanceof CAppCls) {
 			CAppCls e1 = (CAppCls) e;
@@ -592,15 +502,15 @@ public class Emit implements Opcodes {
 			Type t = ((ArrayType) env.get(e1.getArray()).getLeft()).getInner();
 			int varId = env.get(e1.getArray()).getRight();
 			st.getMv().visitVarInsn(ALOAD, varId);
-			st.pushStack(t2o(t));
+			st.pushStack();
 			st.getMv().visitVarInsn(ILOAD, env.get(e1.getIndex()).getRight());
-			st.pushStack(t2o(IntType.getInstance()));
+			st.pushStack();
 			if (t instanceof BoolType || t instanceof IntType) {
 				st.getMv().visitInsn(IALOAD);
-				st.consumeStack(1);
+				st.consumeStack(2, 1);
 			} else if (t instanceof FloatType) {
-				st.getMv().visitInsn(FALOAD);
-				st.consumeStack(1);
+				st.getMv().visitInsn(DALOAD);
+				st.consumeStack(2, 1);
 			} else {
 				throw new RuntimeException();
 			}
@@ -610,32 +520,90 @@ public class Emit implements Opcodes {
 			Type t = ((ArrayType) env.get(e1.getArray()).getLeft()).getInner();
 			int varId = env.get(e1.getArray()).getRight();
 			st.getMv().visitVarInsn(ALOAD, varId);
-			st.pushStack(t2o(t));
+			st.pushStack();
 			st.getMv().visitVarInsn(ILOAD, env.get(e1.getIndex()).getRight());
-			st.pushStack(t2o(IntType.getInstance()));
+			st.pushStack();
 			if (t instanceof BoolType || t instanceof IntType) {
 				st.getMv().visitVarInsn(ILOAD,
 						env.get(e1.getValue()).getRight());
-				st.pushStack(t2o(t));
+				st.pushStack();
 				st.getMv().visitInsn(IASTORE);
-				st.consumeStack(2);
+				st.consumeStack(3, 0);
 			} else if (t instanceof FloatType) {
-				st.getMv().visitVarInsn(FLOAD,
+				st.getMv().visitVarInsn(DLOAD,
 						env.get(e1.getValue()).getRight());
-				st.pushStack(t2o(t));
-				st.getMv().visitInsn(FASTORE);
-				st.consumeStack(2);
+				st.pushStack();
+				st.getMv().visitInsn(DASTORE);
+				st.consumeStack(3, 0);
 			} else {
 				throw new RuntimeException();
 			}
-			//cont.accept(st, t);
 		} else if (e instanceof CExtArray) {
-			CExtArray e1 = (CExtArray) e;
+			// TODO
 		}
 	}
 
-	public void emitFunDef(CFunDef funDef, ClassWriter cw) {
+	private Class<?> t2o(Type t) {
+		if (t instanceof UnitType) {
+			return void.class;
+		} else if (t instanceof BoolType) {
+			return Integer.class;
+		} else if (t instanceof IntType) {
+			return Integer.class;
+		} else if (t instanceof FloatType) {
+			return Float.class;
+		} else if (t instanceof ArrayType) {
+			ArrayType at = (ArrayType) t;
+			if (at.getInner() instanceof FloatType) {
+				return Float[].class;
+			} else {
+				return Integer[].class;
+			}
+		}
+		return Object.class;
+	}
 
+	public void emitFunDef(CFunDef funDef, ClassWriter cw) {
+		String fname = funDef.getName().getLeft().getName();
+		FunType t = (FunType) funDef.getName().getRight();
+		// List<Class<?>> ptypes = t.getParams().stream().map(p -> t2o(p))
+		// .collect(Collectors.toList());
+		Class<?> rtype = t2c(t.getReturned());
+		List<Class<?>> ptypes = new ArrayList<Class<?>>();
+		EmitState st = new EmitState();
+		Map<String, Pair<Type, Integer>> env = new HashMap<>();
+		List<Pair<String, Type>> plist = new ArrayList<>();
+		plist.addAll(funDef.getFreeVars());
+		plist.addAll(funDef.getParams());
+		plist.forEach(p -> {
+			ptypes.add(t2c(p.getRight()));
+			env.put(p.getLeft(), new Pair<>(p.getRight(), st.newLocalVarId()));
+		});
+
+		// function
+		MethodType ftype = MethodType.methodType(rtype, ptypes);
+		MethodVisitor mv = cw.visitMethod(ACC_PUBLIC + ACC_STATIC, fname,
+				ftype.toMethodDescriptorString(), null, null);
+		st.setMv(mv);
+		mv.visitCode();
+		st.newLocalVarId();
+		emitExpr(funDef.getBody(), st, env, defaultCont);
+		mv.visitMaxs(st.getMaxStack(), st.getMaxLocals());
+		mv.visitEnd();
+
+		// partial
+	}
+
+	/*
+	 * f : int -> int -> float -> int
+	 * f$ : int -> IntFunction
+	 * f$$ : int -> DoubleToIntFunction
+	 * 
+	 */
+	public void emitPartial(List<Type> ptypes, Type rtype) {
+		Type ptype = ptypes.get(0);
+		
+		
 	}
 
 	public void emitMain(ClosureExpr e, ClassWriter cw) {
@@ -645,7 +613,6 @@ public class Emit implements Opcodes {
 
 		EmitState st = new EmitState(mv);
 		st.newLocalVarId();
-		st.addLocals("[Ljava/lang/String;");
 
 		emitExpr(e, st, new HashMap<>(), defaultCont);
 

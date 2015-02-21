@@ -30,8 +30,13 @@ public class InvokeTest {
 
 	@Test
 	public void test1() throws Exception {
-		//String code = "let n = 3 in let a = Array.make n 0 in let _ = a.(0) <- 9 in let _ = a.(1) <- 8 in let _ = a.(2) <- 7 in print_int a.(1)";
-		String code = "let n = 3 in let a = Array.make n 0 in let _ = a.(1) <- 10 in print_int a.(1)";
+		// String code =
+		// "let n = 3 in let a = Array.make n 0 in let _ = a.(0) <- 9 in let _ = a.(1) <- 8 in let _ = a.(2) <- 7 in print_int a.(1)";
+		// String code =
+		// "let n = 3 in let a = Array.make n 0 in let _ = a.(1) <- 10 in print_int a.(1)";
+		// String code =
+		// "let a = (1, 2) in let b = (0, a) in let (c, d) = b in let (e, f) = d in print_int f";
+		String code = "let rec add x = x +. x in print_float (add 100.5)";
 		String className = "Test1";
 
 		CProg prog = Main.compile(code);
