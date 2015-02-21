@@ -215,10 +215,11 @@ public class Closure {
 			fvs.removeAll(funDef.getParams().stream().map(p -> p.getLeft())
 					.collect(Collectors.toSet()));
 			if (!fvs.isEmpty()) {
-				Log.getLogger()
-						.info(String.format(
+				Log.getLogger().info(
+						String.format(
 								"free variable(s) %s found in function %s@.",
-								fvs.stream().collect(Collectors.joining(", "))));
+								fvs.stream().collect(Collectors.joining(", ")),
+										funDef.getName().getLeft()));
 				Log.getLogger()
 						.info(String
 								.format("function %s cannot be directly applied in fact@.",

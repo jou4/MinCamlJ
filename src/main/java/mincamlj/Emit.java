@@ -12,6 +12,7 @@ import java.util.function.BiConsumer;
 import java.util.function.DoubleFunction;
 import java.util.function.DoubleToIntFunction;
 import java.util.function.DoubleUnaryOperator;
+import java.util.function.Function;
 import java.util.function.IntFunction;
 import java.util.function.IntToDoubleFunction;
 import java.util.function.IntUnaryOperator;
@@ -60,8 +61,6 @@ import org.objectweb.asm.Handle;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
-
-import com.sun.org.apache.xpath.internal.functions.Function;
 
 public class Emit implements Opcodes {
 
@@ -412,8 +411,8 @@ public class Emit implements Opcodes {
 						} else if (t instanceof FloatType) {
 							st.getMv().visitVarInsn(DLOAD, varId);
 							st.getMv().visitMethodInsn(INVOKESTATIC,
-									"java/lang/Float", "valueOf",
-									"(F)Ljava/lang/Float;", false);
+									"java/lang/Double", "valueOf",
+									"(D)Ljava/lang/Double;", false);
 							st.pushStack();
 						} else {
 							st.getMv().visitVarInsn(ALOAD, varId);
@@ -455,9 +454,9 @@ public class Emit implements Opcodes {
 					st.getMv().visitVarInsn(ISTORE, varId);
 					st.consumeStack(1, 0);
 				} else if (t instanceof FloatType) {
-					st.getMv().visitTypeInsn(CHECKCAST, "java/lang/Float");
+					st.getMv().visitTypeInsn(CHECKCAST, "java/lang/Double");
 					st.getMv().visitMethodInsn(INVOKEVIRTUAL,
-							"java/lang/Float", "floatValue", "()I", false);
+							"java/lang/Double", "doubleValue", "()D", false);
 					st.consumeStack(1, 1);
 					st.getMv().visitVarInsn(DSTORE, varId);
 					st.consumeStack(1, 0);
@@ -509,8 +508,122 @@ public class Emit implements Opcodes {
 			cont.accept(st, ft.getReturned());
 		} else if (e instanceof CAppCls) {
 			CAppCls e1 = (CAppCls) e;
+			FunType ftype = (FunType) env.get(e1.getFunc()).getLeft();
+			int fvarId = env.get(e1.getFunc()).getRight();
+			List<Type> ptypes = e1.getArgs().stream()
+					.map(a -> env.get(a).getLeft())
+					.collect(Collectors.toList());
+
+			// closureをロード
+			st.getMv().visitVarInsn(load(ftype), fvarId);
+			st.pushStack();
+
+			// キャスト
+			Class<?> clsType = functionType(ptypes, ftype.getReturned());
+			st.getMv().visitTypeInsn(Opcodes.CHECKCAST,
+					clsType.getName().replace('.', '/'));
+
+			for (int i = 0; i < e1.getArgs().size(); i++) {
+				String arg = e1.getArgs().get(i);
+				Type atype = env.get(arg).getLeft();
+				int avarId = env.get(arg).getRight();
+				Class<?> lambdaType = functionType(
+						ptypes.subList(i, ptypes.size()), ftype.getReturned());
+				Class<?> rtype = functionType(
+						ptypes.subList(i + 1, ptypes.size()),
+						ftype.getReturned());
+				String apply = (i < e1.getArgs().size() - 1) ? "apply"
+						: applyName(ftype.getReturned());
+
+				st.getMv().visitVarInsn(load(atype), avarId);
+				st.pushStack();
+				if (i < e1.getArgs().size() - 1) {
+					st.getMv().visitMethodInsn(Opcodes.INVOKEINTERFACE,
+							lambdaType.getName().replace('.', '/'), apply,
+							"(I)Ljava/lang/Object;", true);
+					st.consumeStack(2, 1);
+					st.getMv().visitTypeInsn(Opcodes.CHECKCAST,
+							rtype.getName().replace('.', '/'));
+				} else {
+					st.getMv().visitMethodInsn(
+							Opcodes.INVOKEINTERFACE,
+							lambdaType.getName().replace('.', '/'),
+							apply,
+							MethodType.methodType(t2c(ftype.getReturned()),
+									t2c(atype)).toMethodDescriptorString(),
+							true);
+					st.consumeStack(2, 1);
+				}
+			}
+			cont.accept(st, ftype.getReturned());
+
 		} else if (e instanceof CMakeCls) {
 			CMakeCls e1 = (CMakeCls) e;
+			String fname = e1.getEntry().getName();
+			FunType ftype = (FunType) e1.getName().getRight();
+			Function<Type, Class<?>> getRetType = t -> {
+				if (t instanceof BoolType || t instanceof IntType) {
+					return IntFunction.class;
+				} else if (t instanceof FloatType) {
+					return DoubleFunction.class;
+				} else {
+					return Function.class;
+				}
+			};
+
+			// 部分適用開始用の関数の参照を取り出す
+			Class<?> rtype;
+			if (e1.getFreeVars().isEmpty()) {
+				rtype = functionType(ftype.getParams(), ftype.getReturned());
+			} else {
+				rtype = getRetType.apply(env.get(e1.getFreeVars().get(0))
+						.getLeft());
+			}
+			st.getMv().visitMethodInsn(Opcodes.INVOKESTATIC, className,
+					fname + "$",
+					MethodType.methodType(rtype).toMethodDescriptorString(),
+					false);
+			// 自由変数を順に適用
+			// プリミティブな値が戻ってこないのでFunction, IntFunction, DoubleFunctionのいずれか
+			for (int i = 0; i < e1.getFreeVars().size(); i++) {
+				String fv = e1.getFreeVars().get(i);
+				Type fvtype = env.get(fv).getLeft();
+				int varId = env.get(fv).getRight();
+
+				st.getMv().visitVarInsn(load(fvtype), varId);
+				st.pushStack();
+
+				// 適用
+				st.getMv().visitMethodInsn(
+						Opcodes.INVOKEINTERFACE,
+						rtype.getName().replace('.', '/'),
+						"apply",
+						MethodType.methodType(Object.class, t2c(fvtype))
+								.toMethodDescriptorString(), true);
+				st.consumeStack(2, 1);
+
+				if (i < e1.getFreeVars().size() - 1) {
+					// 戻り値の型
+					rtype = getRetType.apply(env.get(
+							e1.getFreeVars().get(i + 1)).getLeft());
+					// キャスト
+					st.getMv().visitTypeInsn(Opcodes.CHECKCAST,
+							rtype.getName().replace('.', '/'));
+				}
+			}
+
+			int clsvarId = st.newLocalVarId();
+			st.getMv().visitVarInsn(ASTORE, clsvarId);
+			st.consumeStack(1, 0);
+
+			// closureをenvに登録
+			Map<String, Pair<Type, Integer>> newEnv = new HashMap<>(env);
+			newEnv.put(e1.getName().getLeft(), new Pair<Type, Integer>(e1
+					.getName().getRight(), clsvarId));
+
+			// 後続を変換
+			emitExpr(e1.getBody(), st, newEnv, cont);
+
 		} else if (e instanceof CGet) {
 			CGet e1 = (CGet) e;
 			Type t = ((ArrayType) env.get(e1.getArray()).getLeft()).getInner();
@@ -557,38 +670,21 @@ public class Emit implements Opcodes {
 		}
 	}
 
-	private Class<?> t2o(Type t) {
-		if (t instanceof UnitType) {
-			return void.class;
-		} else if (t instanceof BoolType) {
-			return Integer.class;
-		} else if (t instanceof IntType) {
-			return Integer.class;
-		} else if (t instanceof FloatType) {
-			return Float.class;
-		} else if (t instanceof ArrayType) {
-			ArrayType at = (ArrayType) t;
-			if (at.getInner() instanceof FloatType) {
-				return Float[].class;
-			} else {
-				return Integer[].class;
-			}
-		}
-		return Object.class;
+	public List<Pair<String, Type>> funDefParams(CFunDef funDef) {
+		List<Pair<String, Type>> plist = new ArrayList<>();
+		plist.addAll(funDef.getFreeVars());
+		plist.addAll(funDef.getParams());
+		return plist;
 	}
 
 	public void emitFunDef(CFunDef funDef, ClassWriter cw) {
 		String fname = funDef.getName().getLeft().getName();
 		FunType t = (FunType) funDef.getName().getRight();
-		// List<Class<?>> ptypes = t.getParams().stream().map(p -> t2o(p))
-		// .collect(Collectors.toList());
 		Class<?> rtype = t2c(t.getReturned());
 		List<Class<?>> ptypes = new ArrayList<Class<?>>();
 		EmitState st = new EmitState();
 		Map<String, Pair<Type, Integer>> env = new HashMap<>();
-		List<Pair<String, Type>> plist = new ArrayList<>();
-		plist.addAll(funDef.getFreeVars());
-		plist.addAll(funDef.getParams());
+		List<Pair<String, Type>> plist = funDefParams(funDef);
 		plist.forEach(p -> {
 			ptypes.add(t2c(p.getRight()));
 			env.put(p.getLeft(), new Pair<>(p.getRight(), st.newLocalVarId()));
@@ -787,52 +883,53 @@ public class Emit implements Opcodes {
 		EmitState st = new EmitState(mv);
 		st.newLocalVarId();
 
-		// emitExpr(e, st, new HashMap<>(), defaultCont);
-		//
-		// mv.visitMaxs(st.getMaxStack(), st.getMaxLocals());
-		// mv.visitEnd();
+		emitExpr(e, st, new HashMap<>(), defaultCont);
 
-		// -------------
-		mv.visitFieldInsn(Opcodes.GETSTATIC, "java/lang/System", "out",
-				"Ljava/io/PrintStream;");
-
-		mv.visitMethodInsn(Opcodes.INVOKESTATIC, className, "add.5$",
-				"()Ljava/util/function/IntFunction;", false);
-
-		mv.visitIntInsn(Opcodes.BIPUSH, 12);
-		mv.visitMethodInsn(Opcodes.INVOKEINTERFACE,
-				"java/util/function/IntFunction", "apply",
-				"(I)Ljava/lang/Object;", true);
-		mv.visitTypeInsn(Opcodes.CHECKCAST, "java/util/function/IntFunction");
-
-		mv.visitIntInsn(Opcodes.BIPUSH, 34);
-		mv.visitMethodInsn(Opcodes.INVOKEINTERFACE,
-				"java/util/function/IntFunction", "apply",
-				"(I)Ljava/lang/Object;", true);
-		mv.visitTypeInsn(Opcodes.CHECKCAST,
-				"java/util/function/IntUnaryOperator");
-
-		mv.visitIntInsn(Opcodes.BIPUSH, 56);
-		mv.visitMethodInsn(Opcodes.INVOKEINTERFACE,
-				"java/util/function/IntUnaryOperator", "applyAsInt", "(I)I",
-				true);
-
-		mv.visitMethodInsn(Opcodes.INVOKESTATIC, "java/lang/Integer",
-				"valueOf", "(I)Ljava/lang/Integer;", false);
-
-		mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream",
-				"println", "(Ljava/lang/Object;)V", false);
-
-		mv.visitInsn(Opcodes.RETURN);
-
-		mv.visitMaxs(2, 1);
+		mv.visitMaxs(st.getMaxStack(), st.getMaxLocals());
 		mv.visitEnd();
 
+		// -------------
+		// mv.visitFieldInsn(Opcodes.GETSTATIC, "java/lang/System", "out",
+		// "Ljava/io/PrintStream;");
+		//
+		// mv.visitMethodInsn(Opcodes.INVOKESTATIC, className, "add.5$",
+		// "()Ljava/util/function/IntFunction;", false);
+		//
+		// mv.visitIntInsn(Opcodes.BIPUSH, 12);
+		// mv.visitMethodInsn(Opcodes.INVOKEINTERFACE,
+		// "java/util/function/IntFunction", "apply",
+		// "(I)Ljava/lang/Object;", true);
+		// mv.visitTypeInsn(Opcodes.CHECKCAST,
+		// "java/util/function/IntFunction");
+		//
+		// mv.visitIntInsn(Opcodes.BIPUSH, 34);
+		// mv.visitMethodInsn(Opcodes.INVOKEINTERFACE,
+		// "java/util/function/IntFunction", "apply",
+		// "(I)Ljava/lang/Object;", true);
+		// mv.visitTypeInsn(Opcodes.CHECKCAST,
+		// "java/util/function/IntUnaryOperator");
+		//
+		// mv.visitIntInsn(Opcodes.BIPUSH, 56);
+		// mv.visitMethodInsn(Opcodes.INVOKEINTERFACE,
+		// "java/util/function/IntUnaryOperator", "applyAsInt", "(I)I",
+		// true);
+		//
+		// mv.visitMethodInsn(Opcodes.INVOKESTATIC, "java/lang/Integer",
+		// "valueOf", "(I)Ljava/lang/Integer;", false);
+		//
+		// mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream",
+		// "println", "(Ljava/lang/Object;)V", false);
+		//
+		// mv.visitInsn(Opcodes.RETURN);
+		//
+		// mv.visitMaxs(2, 1);
+		// mv.visitEnd();
 		// -------------
 
 	}
 
 	private String className;
+	private Map<String, CFunDef> funDefs;
 	private Map<String, Type> funcEnv;
 
 	public Emit(String className) {
@@ -841,10 +938,14 @@ public class Emit implements Opcodes {
 	}
 
 	public byte[] emit(CProg prog) {
+		funDefs = new HashMap<>();
 		funcEnv = new HashMap<>();
 		prog.getFunDefs().forEach(
-				f -> funcEnv.put(f.getName().getLeft().getName(), f.getName()
-						.getRight()));
+				f -> {
+					funDefs.put(f.getName().getLeft().getName(), f);
+					funcEnv.put(f.getName().getLeft().getName(), f.getName()
+							.getRight());
+				});
 
 		// ClassWriter cw = new ClassWriter(0);
 		ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
@@ -866,5 +967,4 @@ public class Emit implements Opcodes {
 
 		return cw.toByteArray();
 	}
-
 }

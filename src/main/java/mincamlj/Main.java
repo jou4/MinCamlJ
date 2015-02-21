@@ -1,5 +1,7 @@
 package mincamlj;
 
+import java.io.DataOutputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -39,27 +41,35 @@ public class Main {
 		KNormalExpr e1 = new KNormal().transform(e0);
 		e1 = new Alpha().transform(e1);
 
-//		for (int i = 0; i < limit; i++) {
-//			e1 = new Beta().transform(e1);
-//			e1 = new Assoc().transform(e1);
-//			e1 = new Inline().transform(e1);
-//			e1 = new ConstFold().transform(e1);
-//			e1 = new Elim().transform(e1);
-//		}
+		for (int i = 0; i < limit; i++) {
+			e1 = new Beta().transform(e1);
+			e1 = new Assoc().transform(e1);
+			e1 = new Inline().transform(e1);
+			e1 = new ConstFold().transform(e1);
+			e1 = new Elim().transform(e1);
+		}
 
 		return new Closure().transform(e1);
 	}
 
 	public static void main(String[] args) throws IOException {
-		if (args.length == 0) {
-			System.err.println("file path is not passed.");
+		if (args.length != 2) {
+			System.err.println("file path and class name is not passed.");
 			return;
 		}
 
 		Path path = FileSystems.getDefault().getPath(args[0]);
+		String className = args[1];
+
 		String code = new String(Files.readAllBytes(path));
 		CProg prog = compile(code);
-		System.out.println(prog);
+
+		byte[] bytes = new Emit(className).emit(prog);
+		DataOutputStream out = new DataOutputStream(new FileOutputStream(
+				className + ".class"));
+		out.write(bytes);
+		out.flush();
+		out.close();
 	}
 
 }

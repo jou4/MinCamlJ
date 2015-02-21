@@ -2,18 +2,11 @@ package mincamlj;
 
 import java.io.DataOutputStream;
 import java.io.FileOutputStream;
-import java.lang.invoke.MethodType;
-import java.util.function.IntFunction;
+import java.util.function.Function;
 
 import mincamlj.closure.CProg;
-import mincamlj.parser.SyntaxVisitor;
-import mincamlj.parser.grammer.MinCamlLexer;
-import mincamlj.parser.grammer.MinCamlParser;
 import mincamlj.runtime.Tuple2;
-import mincamlj.syntax.SyntaxExpr;
 
-import org.antlr.v4.runtime.ANTLRInputStream;
-import org.antlr.v4.runtime.CommonTokenStream;
 import org.junit.Test;
 
 public class InvokeTest {
@@ -45,7 +38,13 @@ public class InvokeTest {
 		// "let a = (1, 2) in let b = (0, a) in let (c, d) = b in let (e, f) = d in print_int f";
 		// String code = "let rec add x = x +. x in print_float (add 100.5)";
 		// String code = "let rec add x = x + x in print_int (add 100)";
-		String code = "let rec add a b c = a + b + c in print_int (add 1 2 3)";
+		// String code =
+		// "let rec add a b c = a + b + c in print_int (add 1 2 3)";
+		// String code =
+		// "let f = let rec add x y = x + y in add in print_int (f 10 20)";
+		// String code =
+		// "let f = let rec add x y = x + y in add in let a = f 10 20 in print_int a";
+		String code = "let rec make_adder x = let rec adder y = x + y in adder in print_int ((make_adder 100) 200)";
 		String className = "Test1";
 
 		CProg prog = Main.compile(code);
@@ -58,20 +57,19 @@ public class InvokeTest {
 		out.flush();
 		out.close();
 	}
-	
+
 	@Test
-	public void test3(){
-		String code = "1e-2";
-		MinCamlLexer lexer = new MinCamlLexer(new ANTLRInputStream(code));
-		CommonTokenStream tokens = new CommonTokenStream(lexer);
-		MinCamlParser parser = new MinCamlParser(tokens);
-		SyntaxExpr e = new SyntaxVisitor().visit(parser.exp());
-		System.out.println(e);
+	public void test3() {
+		String code = "let rec make_adder x = let rec adder y = x + y in adder in print_int ((make_adder 10) 20)";
+		String className = "Test1";
+
+		CProg prog = Main.compile(code);
+		System.out.println(prog);
 	}
 
 	public static void main(String[] args) {
-		MethodType mt = MethodType.methodType(IntFunction.class, int.class);
-		System.out.println(mt.toMethodDescriptorString());
+		Function<int[], int[]> f = ia -> ia;
+		System.out.println(f.apply(new int[] { 1, 2, 3 })[2]);
 
 	}
 
