@@ -1,11 +1,22 @@
 package mincamlj;
 
+import java.lang.invoke.CallSite;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
+import java.util.function.DoubleFunction;
+import java.util.function.DoubleToIntFunction;
+import java.util.function.DoubleUnaryOperator;
+import java.util.function.IntFunction;
+import java.util.function.IntToDoubleFunction;
+import java.util.function.IntUnaryOperator;
+import java.util.function.ToDoubleFunction;
+import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
 
 import mincamlj.closure.CAdd;
@@ -45,9 +56,12 @@ import mincamlj.type.UnitType;
 import mincamlj.util.Pair;
 
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Handle;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
+
+import com.sun.org.apache.xpath.internal.functions.Function;
 
 public class Emit implements Opcodes {
 
@@ -592,18 +606,177 @@ public class Emit implements Opcodes {
 		mv.visitEnd();
 
 		// partial
+		emitPartial(fname, ftype, 0, plist.stream().map(p -> p.getRight())
+				.collect(Collectors.toList()), t.getReturned(), cw);
 	}
 
-	/*
+	private int load(Type t) {
+		if (t instanceof BoolType || t instanceof IntType) {
+			return ILOAD;
+		} else if (t instanceof FloatType) {
+			return DLOAD;
+		} else {
+			return ALOAD;
+		}
+	}
+
+	private String repeat(String s, int n) {
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < n; i++)
+			sb.append(s);
+		return sb.toString();
+	}
+
+	/**
+	 * <pre>
+	 * {@code
 	 * f : int -> int -> float -> int
-	 * f$ : int -> IntFunction
-	 * f$$ : int -> DoubleToIntFunction
-	 * 
+	 * f$ : () -> IntFunction
+	 * f$$ : int -> IntFunction
+	 * f$$$ : int -> DoubleToIntFunction
+	 * }
+	 * </pre>
 	 */
-	public void emitPartial(List<Type> ptypes, Type rtype) {
-		Type ptype = ptypes.get(0);
-		
-		
+	public void emitPartial(String originName, MethodType originType, int n,
+			List<Type> ptypes, Type rtype, ClassWriter cw) {
+		boolean isTerminate = n >= (ptypes.size() - 1);
+		String f1name = originName + repeat("$", n + 1);
+		MethodType f1type;
+		if (n == 0) {
+			f1type = MethodType.methodType(functionType(ptypes, rtype));
+		} else {
+			f1type = MethodType.methodType(
+					functionType(ptypes.subList(n, ptypes.size()), rtype),
+					ptypes.subList(0, n).stream().map(p -> t2c(p))
+							.collect(Collectors.toList()));
+		}
+
+		String f2name = isTerminate ? originName : originName
+				+ repeat("$", n + 2);
+		MethodType f2type = isTerminate ? originType : MethodType.methodType(
+				functionType(ptypes.subList(n + 1, ptypes.size()), rtype),
+				ptypes.subList(0, n + 1).stream().map(p -> t2c(p))
+						.collect(Collectors.toList()));
+
+		MethodVisitor mv = cw.visitMethod(Opcodes.ACC_PUBLIC
+				+ Opcodes.ACC_STATIC, f1name,
+				f1type.toMethodDescriptorString(), null, null);
+		mv.visitCode();
+
+		Handle bootstrap = new Handle(Opcodes.H_INVOKESTATIC,
+				"java/lang/invoke/LambdaMetafactory", "metafactory", MethodType
+						.methodType(CallSite.class, MethodHandles.Lookup.class,
+								String.class, MethodType.class,
+								MethodType.class, MethodHandle.class,
+								MethodType.class).toMethodDescriptorString());
+
+		MethodType instantiatedMethodType = MethodType.methodType(
+				functionType(ptypes.subList(n + 1, ptypes.size()), rtype),
+				t2c(ptypes.get(n)));
+		MethodType samMethodType = MethodType.methodType(
+				genericType(instantiatedMethodType.returnType()),
+				t2c(ptypes.get(n)));
+
+		Handle nextFnHandle = new Handle(Opcodes.H_INVOKESTATIC, className,
+				f2name, f2type.toMethodDescriptorString());
+
+		// Functionを得るためのメソッドを動的に生成し、実行する
+		for (int i = 0; i < n; i++) {
+			mv.visitVarInsn(load(ptypes.get(n - 1)), i);
+		}
+
+		// Functionを得るためのメソッドを動的に生成し、実行する
+		mv.visitInvokeDynamicInsn(
+		// Functionを実行するためのメソッド名
+				isTerminate ? applyName(rtype) : "apply",
+				// 動的に生成したメソッド(Functionを得るためのメソッド)の型
+				// invokeDynamicで実行されるメソッドの型
+				f1type.toMethodDescriptorString(),
+				// ブートストラップオブジェクト(ここではLambdaMetafactory.metafactory)
+				bootstrap,
+				// applyの型(genericな型)
+				org.objectweb.asm.Type.getType(samMethodType
+						.toMethodDescriptorString()),
+				// apply実行時に実行するメソッド
+				// InvokeDynamic前に積まれた引数とapplyに渡された引数が全て引数として渡される
+				nextFnHandle,
+				// applyの型(specializedされた型)
+				org.objectweb.asm.Type.getType(instantiatedMethodType
+						.toMethodDescriptorString()));
+
+		mv.visitInsn(Opcodes.ARETURN);
+		mv.visitMaxs(n, n);
+		mv.visitEnd();
+
+		if (!isTerminate) {
+			emitPartial(originName, originType, n + 1, ptypes, rtype, cw);
+		}
+	}
+
+	private String applyName(Type rtype) {
+		if (rtype instanceof BoolType || rtype instanceof IntType) {
+			return "applyAsInt";
+		} else if (rtype instanceof FloatType) {
+			return "applyAsDouble";
+		} else {
+			return "apply";
+		}
+	}
+
+	private Class<?> genericType(Class<?> klass) {
+		if (klass.isPrimitive()) {
+			return klass;
+		} else {
+			return Object.class;
+		}
+	}
+
+	private Class<?> functionType(List<Type> ptypes, Type rtype) {
+		if (ptypes.size() > 1) {
+			Type ptype = ptypes.get(0);
+			if (ptype instanceof BoolType || ptype instanceof IntType) {
+				return IntFunction.class;
+			} else if (ptype instanceof FloatType) {
+				return DoubleFunction.class;
+			} else {
+				return Function.class;
+			}
+		} else if (ptypes.size() == 1) {
+			Type ptype = ptypes.get(0);
+			if (ptype instanceof BoolType || ptype instanceof IntType) {
+				if (rtype instanceof BoolType || rtype instanceof IntType) {
+					return IntUnaryOperator.class;
+				} else if (rtype instanceof FloatType) {
+					return IntToDoubleFunction.class;
+				} else {
+					return IntFunction.class;
+				}
+			} else if (ptype instanceof FloatType) {
+				if (rtype instanceof BoolType || rtype instanceof IntType) {
+					return DoubleToIntFunction.class;
+				} else if (rtype instanceof FloatType) {
+					return DoubleUnaryOperator.class;
+				} else {
+					return DoubleFunction.class;
+				}
+			} else {
+				if (rtype instanceof BoolType || rtype instanceof IntType) {
+					return ToIntFunction.class;
+				} else if (rtype instanceof FloatType) {
+					return ToDoubleFunction.class;
+				} else {
+					return Function.class;
+				}
+			}
+		} else {
+			if (rtype instanceof BoolType || rtype instanceof IntType) {
+				return int.class;
+			} else if (rtype instanceof FloatType) {
+				return double.class;
+			} else {
+				return Object.class;
+			}
+		}
 	}
 
 	public void emitMain(ClosureExpr e, ClassWriter cw) {
@@ -614,10 +787,49 @@ public class Emit implements Opcodes {
 		EmitState st = new EmitState(mv);
 		st.newLocalVarId();
 
-		emitExpr(e, st, new HashMap<>(), defaultCont);
+		// emitExpr(e, st, new HashMap<>(), defaultCont);
+		//
+		// mv.visitMaxs(st.getMaxStack(), st.getMaxLocals());
+		// mv.visitEnd();
 
-		mv.visitMaxs(st.getMaxStack(), st.getMaxLocals());
+		// -------------
+		mv.visitFieldInsn(Opcodes.GETSTATIC, "java/lang/System", "out",
+				"Ljava/io/PrintStream;");
+
+		mv.visitMethodInsn(Opcodes.INVOKESTATIC, className, "add.5$",
+				"()Ljava/util/function/IntFunction;", false);
+
+		mv.visitIntInsn(Opcodes.BIPUSH, 12);
+		mv.visitMethodInsn(Opcodes.INVOKEINTERFACE,
+				"java/util/function/IntFunction", "apply",
+				"(I)Ljava/lang/Object;", true);
+		mv.visitTypeInsn(Opcodes.CHECKCAST, "java/util/function/IntFunction");
+
+		mv.visitIntInsn(Opcodes.BIPUSH, 34);
+		mv.visitMethodInsn(Opcodes.INVOKEINTERFACE,
+				"java/util/function/IntFunction", "apply",
+				"(I)Ljava/lang/Object;", true);
+		mv.visitTypeInsn(Opcodes.CHECKCAST,
+				"java/util/function/IntUnaryOperator");
+
+		mv.visitIntInsn(Opcodes.BIPUSH, 56);
+		mv.visitMethodInsn(Opcodes.INVOKEINTERFACE,
+				"java/util/function/IntUnaryOperator", "applyAsInt", "(I)I",
+				true);
+
+		mv.visitMethodInsn(Opcodes.INVOKESTATIC, "java/lang/Integer",
+				"valueOf", "(I)Ljava/lang/Integer;", false);
+
+		mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream",
+				"println", "(Ljava/lang/Object;)V", false);
+
+		mv.visitInsn(Opcodes.RETURN);
+
+		mv.visitMaxs(2, 1);
 		mv.visitEnd();
+
+		// -------------
+
 	}
 
 	private String className;
