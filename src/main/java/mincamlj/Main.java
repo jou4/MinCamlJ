@@ -1,6 +1,7 @@
 package mincamlj;
 
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.FileSystems;
@@ -53,20 +54,27 @@ public class Main {
 	}
 
 	public static void main(String[] args) throws IOException {
-		if (args.length != 2) {
-			System.err.println("file path and class name is not passed.");
+		if (args.length < 2) {
+			System.err.println("file path and class name is necessary.");
 			return;
 		}
 
 		Path path = FileSystems.getDefault().getPath(args[0]);
 		String className = args[1];
+		String outputDir = (args.length > 2) ? args[2] : ".";
 
 		String code = new String(Files.readAllBytes(path));
 		CProg prog = compile(code);
-
 		byte[] bytes = new Emit(className).emit(prog);
-		DataOutputStream out = new DataOutputStream(new FileOutputStream(
-				className + ".class"));
+
+		File file = new File(outputDir + '\\' + className.replace('.', '\\')
+				+ ".class");
+		File dir = file.getParentFile();
+		if (!dir.exists()) {
+			dir.mkdirs();
+		}
+		DataOutputStream out = new DataOutputStream(new FileOutputStream(file));
+
 		out.write(bytes);
 		out.flush();
 		out.close();
