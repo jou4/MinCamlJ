@@ -579,8 +579,8 @@ public class Emit implements Opcodes {
 				rtype = getRetType.apply(env.get(e1.getFreeVars().get(0))
 						.getLeft());
 			}
-			st.getMv().visitMethodInsn(Opcodes.INVOKESTATIC, className,
-					fname + "$",
+			st.getMv().visitMethodInsn(Opcodes.INVOKESTATIC,
+					className.replace('.', '/'), fname + "$",
 					MethodType.methodType(rtype).toMethodDescriptorString(),
 					false);
 			// 自由変数を順に適用
@@ -773,8 +773,9 @@ public class Emit implements Opcodes {
 				genericType(instantiatedMethodType.returnType()),
 				t2c(ptypes.get(n)));
 
-		Handle nextFnHandle = new Handle(Opcodes.H_INVOKESTATIC, className,
-				f2name, f2type.toMethodDescriptorString());
+		Handle nextFnHandle = new Handle(Opcodes.H_INVOKESTATIC,
+				className.replace('.', '/'), f2name,
+				f2type.toMethodDescriptorString());
 
 		// Functionを得るためのメソッドを動的に生成し、実行する
 		for (int i = 0; i < n; i++) {
@@ -949,8 +950,8 @@ public class Emit implements Opcodes {
 
 		// ClassWriter cw = new ClassWriter(0);
 		ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
-		cw.visit(V1_8, ACC_PUBLIC + ACC_SUPER, className, null,
-				"java/lang/Object", null);
+		cw.visit(V1_8, ACC_PUBLIC + ACC_SUPER, className.replace('.', '/'),
+				null, "java/lang/Object", null);
 
 		MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "<init>", "()V", null,
 				null);
