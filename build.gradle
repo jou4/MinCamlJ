@@ -1,8 +1,10 @@
 apply plugin: 'java'
 apply plugin: 'eclipse'
+apply plugin: 'application'
 
 sourceCompatibility = 1.8
 version = '0.1'
+mainClassName = 'mincamlj.Main'
 
 compileJava {
     options.encoding = 'UTF-8'
@@ -16,6 +18,15 @@ jar {
     manifest {
         attributes 'Implementation-Title': 'Mincaml for Java', 'Implementation-Version': version
     }
+}
+
+task copyToLib(type: Copy) {
+    into "$buildDir/libs"
+    from configurations.runtime
+}
+
+build {
+	dependsOn copyToLib
 }
 
 repositories {
