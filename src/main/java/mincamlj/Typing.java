@@ -440,7 +440,7 @@ public class Typing {
 		throw new RuntimeException("unknown expression: " + e);
 	}
 
-	public static Map<String, Type> extEnv;
+	public static Map<String, Type> extEnv = new HashMap<>();
 
 	public SyntaxExpr typing(SyntaxExpr e) {
 		Map<String, Type> env = new HashMap<>();

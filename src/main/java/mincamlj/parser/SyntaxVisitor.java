@@ -4,8 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import mincamlj.Id;
 import mincamlj.parser.grammer.MinCamlBaseVisitor;
-import mincamlj.parser.grammer.MinCamlParser.AddContext;
+import mincamlj.parser.grammer.MinCamlParser.AddSubContext;
 import mincamlj.parser.grammer.MinCamlParser.AppContext;
 import mincamlj.parser.grammer.MinCamlParser.ArrayCreateContext;
 import mincamlj.parser.grammer.MinCamlParser.ArrayGetContext;
@@ -14,11 +15,6 @@ import mincamlj.parser.grammer.MinCamlParser.BlockContext;
 import mincamlj.parser.grammer.MinCamlParser.BoolContext;
 import mincamlj.parser.grammer.MinCamlParser.EqualContext;
 import mincamlj.parser.grammer.MinCamlParser.ExpContext;
-import mincamlj.parser.grammer.MinCamlParser.FAddContext;
-import mincamlj.parser.grammer.MinCamlParser.FDivContext;
-import mincamlj.parser.grammer.MinCamlParser.FMulContext;
-import mincamlj.parser.grammer.MinCamlParser.FNegContext;
-import mincamlj.parser.grammer.MinCamlParser.FSubContext;
 import mincamlj.parser.grammer.MinCamlParser.FloatContext;
 import mincamlj.parser.grammer.MinCamlParser.GreaterContext;
 import mincamlj.parser.grammer.MinCamlParser.GreaterEqualContext;
@@ -31,13 +27,12 @@ import mincamlj.parser.grammer.MinCamlParser.LessGreaterContext;
 import mincamlj.parser.grammer.MinCamlParser.LetContext;
 import mincamlj.parser.grammer.MinCamlParser.LetRecContext;
 import mincamlj.parser.grammer.MinCamlParser.LetTupleContext;
+import mincamlj.parser.grammer.MinCamlParser.MulDivContext;
 import mincamlj.parser.grammer.MinCamlParser.NegContext;
 import mincamlj.parser.grammer.MinCamlParser.NotExpContext;
 import mincamlj.parser.grammer.MinCamlParser.ParenExpContext;
-import mincamlj.parser.grammer.MinCamlParser.SubContext;
 import mincamlj.parser.grammer.MinCamlParser.TupleContext;
 import mincamlj.parser.grammer.MinCamlParser.UnitContext;
-import mincamlj.Id;
 import mincamlj.syntax.SAdd;
 import mincamlj.syntax.SApp;
 import mincamlj.syntax.SArray;
@@ -149,10 +144,10 @@ public class SyntaxVisitor extends MinCamlBaseVisitor<SyntaxExpr> {
 		return new SNot(ctx.exp().accept(this));
 	}
 
-	@Override
-	public SyntaxExpr visitFDiv(FDivContext ctx) {
-		return new SFDiv(ctx.exp(0).accept(this), ctx.exp(1).accept(this));
-	}
+	// @Override
+	// public SyntaxExpr visitFDiv(FDivContext ctx) {
+	// return new SFDiv(ctx.exp(0).accept(this), ctx.exp(1).accept(this));
+	// }
 
 	@Override
 	public SyntaxExpr visitLessGreater(LessGreaterContext ctx) {
@@ -160,40 +155,40 @@ public class SyntaxVisitor extends MinCamlBaseVisitor<SyntaxExpr> {
 				.accept(this)));
 	}
 
-	@Override
-	public SyntaxExpr visitFNeg(FNegContext ctx) {
-		return new SFNeg(ctx.exp().accept(this));
-	}
+	// @Override
+	// public SyntaxExpr visitFNeg(FNegContext ctx) {
+	// return new SFNeg(ctx.exp().accept(this));
+	// }
 
-	@Override
-	public SyntaxExpr visitNeg(NegContext ctx) {
-		return new SNeg(ctx.exp().accept(this));
-	}
+	// @Override
+	// public SyntaxExpr visitNeg(NegContext ctx) {
+	// return new SNeg(ctx.exp().accept(this));
+	// }
 
 	@Override
 	public SyntaxExpr visitLessEqual(LessEqualContext ctx) {
 		return new SLe(ctx.exp(0).accept(this), ctx.exp(1).accept(this));
 	}
 
-	@Override
-	public SyntaxExpr visitFAdd(FAddContext ctx) {
-		return new SFAdd(ctx.exp(0).accept(this), ctx.exp(1).accept(this));
-	}
+	// @Override
+	// public SyntaxExpr visitFAdd(FAddContext ctx) {
+	// return new SFAdd(ctx.exp(0).accept(this), ctx.exp(1).accept(this));
+	// }
 
-	@Override
-	public SyntaxExpr visitSub(SubContext ctx) {
-		return new SSub(ctx.exp(0).accept(this), ctx.exp(1).accept(this));
-	}
+	// @Override
+	// public SyntaxExpr visitSub(SubContext ctx) {
+	// return new SSub(ctx.exp(0).accept(this), ctx.exp(1).accept(this));
+	// }
 
 	@Override
 	public SyntaxExpr visitGreaterEqual(GreaterEqualContext ctx) {
 		return new SLe(ctx.exp(1).accept(this), ctx.exp(0).accept(this));
 	}
 
-	@Override
-	public SyntaxExpr visitFMul(FMulContext ctx) {
-		return new SFMul(ctx.exp(0).accept(this), ctx.exp(1).accept(this));
-	}
+	// @Override
+	// public SyntaxExpr visitFMul(FMulContext ctx) {
+	// return new SFMul(ctx.exp(0).accept(this), ctx.exp(1).accept(this));
+	// }
 
 	@Override
 	public SyntaxExpr visitEqual(EqualContext ctx) {
@@ -237,10 +232,10 @@ public class SyntaxVisitor extends MinCamlBaseVisitor<SyntaxExpr> {
 				.accept(this)));
 	}
 
-	@Override
-	public SyntaxExpr visitFSub(FSubContext ctx) {
-		return new SFSub(ctx.exp(0).accept(this), ctx.exp(1).accept(this));
-	}
+	// @Override
+	// public SyntaxExpr visitFSub(FSubContext ctx) {
+	// return new SFSub(ctx.exp(0).accept(this), ctx.exp(1).accept(this));
+	// }
 
 	@Override
 	public SyntaxExpr visitArrayPut(ArrayPutContext ctx) {
@@ -248,10 +243,10 @@ public class SyntaxVisitor extends MinCamlBaseVisitor<SyntaxExpr> {
 				ctx.exp(1).accept(this));
 	}
 
-	@Override
-	public SyntaxExpr visitAdd(AddContext ctx) {
-		return new SAdd(ctx.exp(0).accept(this), ctx.exp(1).accept(this));
-	}
+	// @Override
+	// public SyntaxExpr visitAdd(AddContext ctx) {
+	// return new SAdd(ctx.exp(0).accept(this), ctx.exp(1).accept(this));
+	// }
 
 	@Override
 	public SyntaxExpr visitIf(IfContext ctx) {
@@ -263,6 +258,37 @@ public class SyntaxVisitor extends MinCamlBaseVisitor<SyntaxExpr> {
 	public SyntaxExpr visitLess(LessContext ctx) {
 		return new SNot(new SLe(ctx.exp(1).accept(this), ctx.exp(0)
 				.accept(this)));
+	}
+
+	@Override
+	public SyntaxExpr visitNeg(NegContext ctx) {
+		if (ctx.MINUS() != null) {
+			return new SNeg(ctx.exp().accept(this));
+		} else {
+			return new SFNeg(ctx.exp().accept(this));
+		}
+	}
+
+	@Override
+	public SyntaxExpr visitMulDiv(MulDivContext ctx) {
+		if (ctx.AST_DOT() != null) {
+			return new SFMul(ctx.exp(0).accept(this), ctx.exp(1).accept(this));
+		} else {
+			return new SFDiv(ctx.exp(0).accept(this), ctx.exp(1).accept(this));
+		}
+	}
+
+	@Override
+	public SyntaxExpr visitAddSub(AddSubContext ctx) {
+		if (ctx.PLUS() != null) {
+			return new SAdd(ctx.exp(0).accept(this), ctx.exp(1).accept(this));
+		} else if (ctx.MINUS() != null) {
+			return new SSub(ctx.exp(0).accept(this), ctx.exp(1).accept(this));
+		} else if (ctx.PLUS_DOT() != null) {
+			return new SFAdd(ctx.exp(0).accept(this), ctx.exp(1).accept(this));
+		} else {
+			return new SFSub(ctx.exp(0).accept(this), ctx.exp(1).accept(this));
+		}
 	}
 
 }

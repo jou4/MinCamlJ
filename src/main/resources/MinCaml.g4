@@ -53,9 +53,10 @@ simple_exp
 exp
 	: simple_exp			#SimpleExp
 	| NOT exp				#NotExp
-	| MINUS exp				#Neg
-	| exp PLUS exp			#Add
-	| exp MINUS exp			#Sub
+	| (MINUS|MINUS_DOT) exp	#Neg
+//	| MINUS exp				#Neg
+//	| exp PLUS exp			#Add
+//	| exp MINUS exp			#Sub
 	| exp EQUAL exp			#Equal
 	| exp LESS_GREATER exp	#LessGreater
 	| exp LESS exp			#Less
@@ -63,11 +64,11 @@ exp
 	| exp LESS_EQUAL exp	#LessEqual
 	| exp GREATER_EQUAL exp	#GreaterEqual
 	| IF exp THEN exp ELSE exp	#If
-	| MINUS_DOT exp			#FNeg
-	| exp PLUS_DOT exp		#FAdd
-	| exp MINUS_DOT exp		#FSub
-	| exp AST_DOT exp		#FMul
-	| exp SLASH_DOT exp		#FDiv
+//	| MINUS_DOT exp			#FNeg
+//	| exp PLUS_DOT exp		#FAdd
+//	| exp MINUS_DOT exp		#FSub
+//	| exp AST_DOT exp		#FMul
+//	| exp SLASH_DOT exp		#FDiv
 	| LET IDENT EQUAL exp IN exp	#Let
 	| LET REC IDENT IDENT+ EQUAL exp IN exp	#LetRec
 	| exp simple_exp+		#App
@@ -75,4 +76,6 @@ exp
 	| simple_exp DOT LPAREN exp RPAREN LESS_MINUS exp	#ArrayPut
 	| exp SEMICOLON exp		#Block
 	| ARRAY_CREATE simple_exp simple_exp	#ArrayCreate
+	| exp (AST_DOT|SLASH_DOT) exp	#MulDiv
+	| exp (PLUS|MINUS|PLUS_DOT|MINUS_DOT) exp	#AddSub
 	;
