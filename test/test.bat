@@ -20,7 +20,11 @@ REM  call %GRADLE% -p %BASE_DIR% build
 
 if not exist %TEST_OUTPUT_DIR% mkdir %TEST_OUTPUT_DIR%
 
-for /f "delims=;" %%i in ('dir /b .\ml\*.ml') do call :TEST %%~ni
+if "%~1" == "" (
+  for /f "delims=;" %%i in ('dir /b .\ml\*.ml') do call :TEST %%~ni
+) else (
+  call :TEST %~1
+)
 echo check done.
 goto END
 
@@ -40,4 +44,4 @@ exit /b
 
 :END
 pause
-exit
+REM  exit
