@@ -270,7 +270,6 @@ public class Emit implements Opcodes {
 				st.getMv().visitJumpInsn(IFEQ, branch);
 				st.consumeStack(1, 0);
 				// false
-				emitExpr(e1.getFalseExpr(), st, env, cont);
 				if (cont == defaultCont) {
 					emitExpr(e1.getFalseExpr(), st, env, cont);
 				} else {
@@ -294,7 +293,6 @@ public class Emit implements Opcodes {
 				st.getMv().visitJumpInsn(IFEQ, branch);
 				st.consumeStack(1, 0);
 				// false
-				emitExpr(e1.getFalseExpr(), st, env, cont);
 				if (cont == defaultCont) {
 					emitExpr(e1.getFalseExpr(), st, env, cont);
 				} else {
@@ -394,7 +392,7 @@ public class Emit implements Opcodes {
 				if (t instanceof UnitType) {
 					// do nothing
 					return;
-				} else if (t instanceof IntType) {
+				} else if (t instanceof BoolType || t instanceof IntType) {
 					s.getMv().visitVarInsn(ISTORE, varId);
 				} else if (t instanceof FloatType) {
 					s.getMv().visitVarInsn(DSTORE, varId);
@@ -508,7 +506,7 @@ public class Emit implements Opcodes {
 			for (String a : e1.getArgs()) {
 				Type t = env.get(a).getLeft();
 				int varId = env.get(a).getRight();
-				if (t instanceof IntType) {
+				if (t instanceof BoolType || t instanceof IntType) {
 					st.getMv().visitVarInsn(ILOAD, varId);
 					st.pushStack();
 				} else if (t instanceof FloatType) {
