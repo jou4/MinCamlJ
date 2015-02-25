@@ -265,10 +265,6 @@ public class Emit implements Opcodes {
 				st.getMv().visitVarInsn(ILOAD,
 						env.get(e1.getRight()).getRight());
 				st.pushStack();
-				// st.getMv().visitInsn(ISUB);
-				// st.consumeStack(2, 1);
-				// st.getMv().visitJumpInsn(IFEQ, branch);
-				// st.consumeStack(1, 0);
 				st.getMv().visitJumpInsn(IF_ICMPEQ, branch);
 				st.consumeStack(2, 0);
 				// false
@@ -292,8 +288,6 @@ public class Emit implements Opcodes {
 				st.pushStack();
 				st.getMv().visitInsn(DCMPL);
 				st.consumeStack(2, 1);
-				// st.getMv().visitInsn(DSUB);
-				// st.consumeStack(2, 1);
 				st.getMv().visitJumpInsn(IFEQ, branch);
 				st.consumeStack(1, 0);
 				// false
@@ -325,10 +319,6 @@ public class Emit implements Opcodes {
 				st.getMv().visitVarInsn(ILOAD,
 						env.get(e1.getRight()).getRight());
 				st.pushStack();
-				// st.getMv().visitInsn(ISUB);
-				// st.consumeStack(2, 1);
-				// st.getMv().visitJumpInsn(IFLE, branch);
-				// st.consumeStack(1, 0);
 				st.getMv().visitJumpInsn(IF_ICMPLE, branch);
 				st.consumeStack(2, 0);
 				// false
@@ -352,8 +342,6 @@ public class Emit implements Opcodes {
 				st.pushStack();
 				st.getMv().visitInsn(DCMPL);
 				st.consumeStack(2, 1);
-				// st.getMv().visitInsn(DSUB);
-				// st.consumeStack(2, 1);
 				st.getMv().visitJumpInsn(IFLE, branch);
 				st.consumeStack(1, 0);
 				// false
@@ -391,8 +379,6 @@ public class Emit implements Opcodes {
 			cont.accept(st, t);
 		} else if (e instanceof CLet) {
 			CLet e1 = (CLet) e;
-			// TODO newLocalVarId2Word
-			// int varId = st.newLocalVarId();
 			int varId = getNewLocalVarId(st, e1.getVar().getRight());
 			emitExpr(e1.getValue(), st, env, (s, t) -> {
 				if (t instanceof UnitType) {
@@ -455,8 +441,6 @@ public class Emit implements Opcodes {
 			int tupleId = env.get(e1.getValue()).getRight();
 			for (int i = 0; i < e1.getVars().size(); i++) {
 				Pair<String, Type> var = e1.getVars().get(i);
-				// TODO newLocalVarId2Word
-				// int varId = st.newLocalVarId();
 				Type t = var.getRight();
 				int varId = getNewLocalVarId(st, t);
 				st.getMv().visitVarInsn(ALOAD, tupleId);
@@ -710,7 +694,6 @@ public class Emit implements Opcodes {
 		plist.forEach(p -> {
 			Type ptype = p.getRight();
 			ptypes.add(t2c(ptype));
-			// TODO newLocalVarId2Word
 			int varId = getNewLocalVarId(st, ptype);
 			env.put(p.getLeft(), new Pair<>(ptype, varId));
 		});
