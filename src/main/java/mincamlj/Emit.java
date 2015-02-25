@@ -139,6 +139,12 @@ public class Emit implements Opcodes {
 			return localVarId++;
 		}
 
+		public int newLocalVarId2Word() {
+			int varId = localVarId++;
+			localVarId++;
+			return varId;
+		}
+
 		public void pushStack() {
 			curStack++;
 			maxStack = Math.max(maxStack, curStack);
@@ -155,6 +161,13 @@ public class Emit implements Opcodes {
 		public int getMaxStack() {
 			return maxStack;
 		}
+	}
+	
+	private int getNewLocalVarId(EmitState st, Type t){
+		if(t instanceof FloatType){
+			return st.newLocalVarId2Word();
+		}
+		return st.newLocalVarId();
 	}
 
 	public void emitExpr(ClosureExpr e, EmitState st,
@@ -373,7 +386,9 @@ public class Emit implements Opcodes {
 			cont.accept(st, t);
 		} else if (e instanceof CLet) {
 			CLet e1 = (CLet) e;
-			int varId = st.newLocalVarId();
+			// TODO newLocalVarId2Word
+			//int varId = st.newLocalVarId();
+			int varId = getNewLocalVarId(st, e1.getVar().getRight());
 			emitExpr(e1.getValue(), st, env, (s, t) -> {
 				if (t instanceof UnitType) {
 					// do nothing
@@ -435,8 +450,10 @@ public class Emit implements Opcodes {
 			int tupleId = env.get(e1.getValue()).getRight();
 			for (int i = 0; i < e1.getVars().size(); i++) {
 				Pair<String, Type> var = e1.getVars().get(i);
-				int varId = st.newLocalVarId();
+				// TODO newLocalVarId2Word
+				//int varId = st.newLocalVarId();
 				Type t = var.getRight();
+				int varId = getNewLocalVarId(st, t);
 				st.getMv().visitVarInsn(ALOAD, tupleId);
 				st.pushStack();
 				st.getMv().visitTypeInsn(CHECKCAST,
@@ -686,8 +703,11 @@ public class Emit implements Opcodes {
 		Map<String, Pair<Type, Integer>> env = new HashMap<>();
 		List<Pair<String, Type>> plist = funDefParams(funDef);
 		plist.forEach(p -> {
-			ptypes.add(t2c(p.getRight()));
-			env.put(p.getLeft(), new Pair<>(p.getRight(), st.newLocalVarId()));
+			Type ptype = p.getRight();
+			ptypes.add(t2c(ptype));
+			// TODO newLocalVarId2Word
+			int varId = getNewLocalVarId(st, ptype);
+			env.put(p.getLeft(), new Pair<>(ptype, varId));
 		});
 
 		// function
@@ -696,7 +716,7 @@ public class Emit implements Opcodes {
 				ftype.toMethodDescriptorString(), null, null);
 		st.setMv(mv);
 		mv.visitCode();
-		st.newLocalVarId();
+		//st.newLocalVarId();
 		emitExpr(funDef.getBody(), st, env, defaultCont);
 		mv.visitMaxs(st.getMaxStack(), st.getMaxLocals());
 		mv.visitEnd();
