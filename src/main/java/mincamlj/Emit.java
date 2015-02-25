@@ -265,10 +265,12 @@ public class Emit implements Opcodes {
 				st.getMv().visitVarInsn(ILOAD,
 						env.get(e1.getRight()).getRight());
 				st.pushStack();
-				st.getMv().visitInsn(ISUB);
-				st.consumeStack(2, 1);
-				st.getMv().visitJumpInsn(IFEQ, branch);
-				st.consumeStack(1, 0);
+				// st.getMv().visitInsn(ISUB);
+				// st.consumeStack(2, 1);
+				// st.getMv().visitJumpInsn(IFEQ, branch);
+				// st.consumeStack(1, 0);
+				st.getMv().visitJumpInsn(IF_ICMPEQ, branch);
+				st.consumeStack(2, 0);
 				// false
 				if (cont == defaultCont) {
 					emitExpr(e1.getFalseExpr(), st, env, cont);
@@ -288,8 +290,10 @@ public class Emit implements Opcodes {
 				st.getMv().visitVarInsn(DLOAD,
 						env.get(e1.getRight()).getRight());
 				st.pushStack();
-				st.getMv().visitInsn(DSUB);
+				st.getMv().visitInsn(DCMPL);
 				st.consumeStack(2, 1);
+				// st.getMv().visitInsn(DSUB);
+				// st.consumeStack(2, 1);
 				st.getMv().visitJumpInsn(IFEQ, branch);
 				st.consumeStack(1, 0);
 				// false
@@ -321,10 +325,12 @@ public class Emit implements Opcodes {
 				st.getMv().visitVarInsn(ILOAD,
 						env.get(e1.getRight()).getRight());
 				st.pushStack();
-				st.getMv().visitInsn(ISUB);
-				st.consumeStack(2, 1);
-				st.getMv().visitJumpInsn(IFLE, branch);
-				st.consumeStack(1, 0);
+				// st.getMv().visitInsn(ISUB);
+				// st.consumeStack(2, 1);
+				// st.getMv().visitJumpInsn(IFLE, branch);
+				// st.consumeStack(1, 0);
+				st.getMv().visitJumpInsn(IF_ICMPLE, branch);
+				st.consumeStack(2, 0);
 				// false
 				if (cont == defaultCont) {
 					emitExpr(e1.getFalseExpr(), st, env, cont);
@@ -337,7 +343,6 @@ public class Emit implements Opcodes {
 				// true
 				st.getMv().visitLabel(branch);
 				emitExpr(e1.getTrueExpr(), st, env, cont);
-				st.getMv().visitLabel(end);
 			} else if (t1 instanceof FloatType) {
 				st.getMv()
 						.visitVarInsn(DLOAD, env.get(e1.getLeft()).getRight());
@@ -345,9 +350,11 @@ public class Emit implements Opcodes {
 				st.getMv().visitVarInsn(DLOAD,
 						env.get(e1.getRight()).getRight());
 				st.pushStack();
-				st.getMv().visitInsn(DSUB);
+				st.getMv().visitInsn(DCMPL);
 				st.consumeStack(2, 1);
-				st.getMv().visitJumpInsn(IFEQ, branch);
+				// st.getMv().visitInsn(DSUB);
+				// st.consumeStack(2, 1);
+				st.getMv().visitJumpInsn(IFLE, branch);
 				st.consumeStack(1, 0);
 				// false
 				if (cont == defaultCont) {
@@ -362,7 +369,6 @@ public class Emit implements Opcodes {
 				// true
 				st.getMv().visitLabel(branch);
 				emitExpr(e1.getTrueExpr(), st, env, cont);
-				st.getMv().visitLabel(end);
 			} else {
 				throw new RuntimeException(
 						"equality supported only for bool, int, and float");
