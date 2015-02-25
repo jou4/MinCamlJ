@@ -162,9 +162,9 @@ public class Emit implements Opcodes {
 			return maxStack;
 		}
 	}
-	
-	private int getNewLocalVarId(EmitState st, Type t){
-		if(t instanceof FloatType){
+
+	private int getNewLocalVarId(EmitState st, Type t) {
+		if (t instanceof FloatType) {
 			return st.newLocalVarId2Word();
 		}
 		return st.newLocalVarId();
@@ -271,17 +271,17 @@ public class Emit implements Opcodes {
 				st.consumeStack(1, 0);
 				// false
 				emitExpr(e1.getFalseExpr(), st, env, cont);
-				// true
-				st.getMv().visitLabel(branch);
-
 				if (cont == defaultCont) {
-					emitExpr(e1.getTrueExpr(), st, env, cont);
+					emitExpr(e1.getFalseExpr(), st, env, cont);
 				} else {
-					emitExpr(e1.getTrueExpr(), st, env, (s, t) -> {
+					emitExpr(e1.getFalseExpr(), st, env, (s, t) -> {
 						cont.accept(s, t);
 						s.getMv().visitJumpInsn(GOTO, end);
 					});
 				}
+				// true
+				st.getMv().visitLabel(branch);
+				emitExpr(e1.getTrueExpr(), st, env, cont);
 			} else if (t1 instanceof FloatType) {
 				st.getMv()
 						.visitVarInsn(DLOAD, env.get(e1.getLeft()).getRight());
@@ -295,16 +295,17 @@ public class Emit implements Opcodes {
 				st.consumeStack(1, 0);
 				// false
 				emitExpr(e1.getFalseExpr(), st, env, cont);
-				// true
-				st.getMv().visitLabel(branch);
 				if (cont == defaultCont) {
-					emitExpr(e1.getTrueExpr(), st, env, cont);
+					emitExpr(e1.getFalseExpr(), st, env, cont);
 				} else {
-					emitExpr(e1.getTrueExpr(), st, env, (s, t) -> {
+					emitExpr(e1.getFalseExpr(), st, env, (s, t) -> {
 						cont.accept(s, t);
 						s.getMv().visitJumpInsn(GOTO, end);
 					});
 				}
+				// true
+				st.getMv().visitLabel(branch);
+				emitExpr(e1.getTrueExpr(), st, env, cont);
 			} else {
 				throw new RuntimeException(
 						"equality supported only for bool, int, and float");
@@ -387,7 +388,7 @@ public class Emit implements Opcodes {
 		} else if (e instanceof CLet) {
 			CLet e1 = (CLet) e;
 			// TODO newLocalVarId2Word
-			//int varId = st.newLocalVarId();
+			// int varId = st.newLocalVarId();
 			int varId = getNewLocalVarId(st, e1.getVar().getRight());
 			emitExpr(e1.getValue(), st, env, (s, t) -> {
 				if (t instanceof UnitType) {
@@ -451,7 +452,7 @@ public class Emit implements Opcodes {
 			for (int i = 0; i < e1.getVars().size(); i++) {
 				Pair<String, Type> var = e1.getVars().get(i);
 				// TODO newLocalVarId2Word
-				//int varId = st.newLocalVarId();
+				// int varId = st.newLocalVarId();
 				Type t = var.getRight();
 				int varId = getNewLocalVarId(st, t);
 				st.getMv().visitVarInsn(ALOAD, tupleId);
@@ -716,7 +717,7 @@ public class Emit implements Opcodes {
 				ftype.toMethodDescriptorString(), null, null);
 		st.setMv(mv);
 		mv.visitCode();
-		//st.newLocalVarId();
+		// st.newLocalVarId();
 		emitExpr(funDef.getBody(), st, env, defaultCont);
 		mv.visitMaxs(st.getMaxStack(), st.getMaxLocals());
 		mv.visitEnd();
