@@ -1,5 +1,6 @@
 package mincamlj.runtime;
 
+
 public class Prelude {
 
 	public static void min_caml_print_bool(int v) {
@@ -32,6 +33,32 @@ public class Prelude {
 			array[i] = initialize;
 		}
 		return array;
+	}
+
+	public static void min_caml_print_array(int[] array) {
+		StringBuilder sb = new StringBuilder();
+		sb.append("[");
+		String sep = "";
+		for (int i = 0; i < array.length; i++) {
+			sb.append(sep);
+			sb.append(array[i]);
+			sep = ", ";
+		}
+		sb.append("]");
+		System.out.println(sb.toString());
+	}
+
+	public static void min_caml_print_float_array(double[] array) {
+		StringBuilder sb = new StringBuilder();
+		sb.append("[");
+		String sep = "";
+		for (int i = 0; i < array.length; i++) {
+			sb.append(sep);
+			sb.append(array[i]);
+			sep = ", ";
+		}
+		sb.append("]");
+		System.out.println(sb.toString());
 	}
 
 }
