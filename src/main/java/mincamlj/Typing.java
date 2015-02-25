@@ -62,8 +62,8 @@ public class Typing {
 			VarType t1 = (VarType) t;
 			if (t1.isNone()) {
 				Log.getLogger()
-						.info("uninstantiated type variable detected; assuming int@.");
-				t1.setInner(IntType.getInstance());
+						.info("uninstantiated type variable detected; assuming unit@.");
+				t1.setInner(UnitType.getInstance());
 				return t1.getInner();
 			} else {
 				t1.setInner(derefType(t1.getInner()));
