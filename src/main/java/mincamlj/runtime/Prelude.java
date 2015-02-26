@@ -1,7 +1,30 @@
 package mincamlj.runtime;
 
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+
+import mincamlj.type.ArrayType;
+import mincamlj.type.FloatType;
+import mincamlj.type.FunType;
+import mincamlj.type.IntType;
+import mincamlj.type.Type;
 
 public class Prelude {
+
+	public static Map<String, Type> preset = new HashMap<>();
+	static {
+		preset.put(
+				"create_array",
+				new FunType(Arrays.asList(IntType.getInstance(),
+						IntType.getInstance()), new ArrayType(IntType
+						.getInstance())));
+		preset.put(
+				"create_float_array",
+				new FunType(Arrays.asList(IntType.getInstance(),
+						FloatType.getInstance()), new ArrayType(FloatType
+						.getInstance())));
+	}
 
 	public static void min_caml_print_bool(int v) {
 		System.out.println((v == 1) ? "true" : "false");

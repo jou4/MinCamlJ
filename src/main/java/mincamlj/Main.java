@@ -7,34 +7,18 @@ import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.HashMap;
 
 import mincamlj.closure.CProg;
 import mincamlj.knormal.KNormalExpr;
+import mincamlj.runtime.Prelude;
 import mincamlj.syntax.SyntaxExpr;
-import mincamlj.type.ArrayType;
-import mincamlj.type.FloatType;
-import mincamlj.type.FunType;
-import mincamlj.type.IntType;
-import mincamlj.type.Type;
 
 public class Main {
 
 	private static final int limit = 1000;
 
 	public static CProg compile(String code) {
-		Typing.extEnv = new HashMap<String, Type>();
-		Typing.extEnv.put(
-				"create_array",
-				new FunType(Arrays.asList(IntType.getInstance(),
-						IntType.getInstance()), new ArrayType(IntType
-						.getInstance())));
-		Typing.extEnv.put(
-				"create_float_array",
-				new FunType(Arrays.asList(IntType.getInstance(),
-						FloatType.getInstance()), new ArrayType(FloatType
-						.getInstance())));
+		Typing.extEnv.putAll(Prelude.preset);
 
 		SyntaxExpr e0 = new Parser().parse(code);
 		e0 = new Typing().typing(e0);
