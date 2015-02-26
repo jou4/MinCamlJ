@@ -557,9 +557,13 @@ public class Emit implements Opcodes {
 				st.getMv().visitVarInsn(load(atype), avarId);
 				st.pushStack();
 				if (i < e1.getArgs().size() - 1) {
-					st.getMv().visitMethodInsn(Opcodes.INVOKEINTERFACE,
-							lambdaType.getName().replace('.', '/'), apply,
-							"(I)Ljava/lang/Object;", true);
+					st.getMv().visitMethodInsn(
+							Opcodes.INVOKEINTERFACE,
+							lambdaType.getName().replace('.', '/'),
+							apply,
+							MethodType.methodType(Object.class,
+									t2cGeneric(atype))
+									.toMethodDescriptorString(), true);
 					st.consumeStack(2, 1);
 					st.getMv().visitTypeInsn(Opcodes.CHECKCAST,
 							rtype.getName().replace('.', '/'));
@@ -800,8 +804,11 @@ public class Emit implements Opcodes {
 				f2type.toMethodDescriptorString());
 
 		// Functionを得るためのメソッドを動的に生成し、実行する
+		int id = 0;
 		for (int i = 0; i < n; i++) {
-			mv.visitVarInsn(load(ptypes.get(n - 1)), i);
+			Type t = ptypes.get(i);
+			mv.visitVarInsn(load(ptypes.get(n - 1)), id);
+			id += (t instanceof FloatType) ? 2 : 1;
 		}
 
 		// Functionを得るためのメソッドを動的に生成し、実行する
