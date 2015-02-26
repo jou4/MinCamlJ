@@ -192,7 +192,7 @@ public class Closure {
 		} else if (e instanceof KLet) {
 			KLet e1 = (KLet) e;
 			Map<String, Type> newEnv = new HashMap<>(env);
-			env.put(e1.getVar().getLeft(), e1.getVar().getRight());
+			newEnv.put(e1.getVar().getLeft(), e1.getVar().getRight());
 			return new CLet(e1.getVar(), transformExpr(e1.getValue(), env,
 					known), transformExpr(e1.getBody(), newEnv, known));
 		} else if (e instanceof KVar) {

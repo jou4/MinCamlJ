@@ -98,6 +98,19 @@ public class Emit implements Opcodes {
 		return Object.class;
 	}
 
+	private Class<?> t2cGeneric(Type t) {
+		if (t instanceof UnitType) {
+			return void.class;
+		} else if (t instanceof BoolType) {
+			return int.class;
+		} else if (t instanceof IntType) {
+			return int.class;
+		} else if (t instanceof FloatType) {
+			return double.class;
+		}
+		return Object.class;
+	}
+
 	private String tupleName(int size) {
 		return "mincamlj.runtime.Tuple" + size;
 	}
@@ -555,9 +568,10 @@ public class Emit implements Opcodes {
 							Opcodes.INVOKEINTERFACE,
 							lambdaType.getName().replace('.', '/'),
 							apply,
-							MethodType.methodType(t2c(ftype.getReturned()),
-									t2c(atype)).toMethodDescriptorString(),
-							true);
+							MethodType.methodType(
+									t2cGeneric(ftype.getReturned()),
+									t2cGeneric(atype))
+									.toMethodDescriptorString(), true);
 					st.consumeStack(2, 1);
 				}
 			}
@@ -604,7 +618,7 @@ public class Emit implements Opcodes {
 						Opcodes.INVOKEINTERFACE,
 						rtype.getName().replace('.', '/'),
 						"apply",
-						MethodType.methodType(Object.class, t2c(fvtype))
+						MethodType.methodType(Object.class, t2cGeneric(fvtype))
 								.toMethodDescriptorString(), true);
 				st.consumeStack(2, 1);
 
@@ -779,7 +793,7 @@ public class Emit implements Opcodes {
 				t2c(ptypes.get(n)));
 		MethodType samMethodType = MethodType.methodType(
 				genericType(instantiatedMethodType.returnType()),
-				t2c(ptypes.get(n)));
+				t2cGeneric(ptypes.get(n)));
 
 		Handle nextFnHandle = new Handle(Opcodes.H_INVOKESTATIC,
 				className.replace('.', '/'), f2name,

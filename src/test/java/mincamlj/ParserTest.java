@@ -5,6 +5,7 @@ import mincamlj.knormal.KNormalExpr;
 import mincamlj.parser.SyntaxVisitor;
 import mincamlj.parser.grammer.MinCamlLexer;
 import mincamlj.parser.grammer.MinCamlParser;
+import mincamlj.runtime.Prelude;
 import mincamlj.syntax.SyntaxExpr;
 
 import org.antlr.v4.runtime.ANTLRInputStream;
@@ -13,13 +14,20 @@ import org.antlr.v4.runtime.RuleContext;
 import org.junit.Test;
 
 public class ParserTest {
+	static {
+		Typing.extEnv.putAll(Prelude.preset);
+	}
 
 	@Test
 	public void test() {
 		String s = "";
 		// s = "if a = 10 then a + 2 else a - 3";
-		// s = "let a = 1 in let b = 2.0 in let c = (a, b) in let (d, e) = c in print_float e";
-		s = "let h = if 1.2 > 3.4 then 1 else 2 in print_int h";
+		// s =
+		// "let a = 1 in let b = 2.0 in let c = (a, b) in let (d, e) = c in print_float e";
+		s = "let rec counter x = " + "let ref = Array.make 1 0 in "
+				+ "let rec f x = " + " let n = ref.(0) + 1 in "
+				+ " let _ = ref.(0) <- n in n in f in "
+				+ " let f = counter 0 in " + " let a = f 0 in print_int a";
 		MinCamlLexer lexer = new MinCamlLexer(new ANTLRInputStream(s));
 		CommonTokenStream tokens = new CommonTokenStream(lexer);
 		MinCamlParser parser = new MinCamlParser(tokens);
@@ -61,6 +69,21 @@ public class ParserTest {
 		System.out.println(prog);
 
 		byte[] bytes = new Emit("test").emit(prog);
+	}
+
+	@Test
+	public void test2() {
+		String s = "";
+		// s = "if a = 10 then a + 2 else a - 3";
+		// s =
+		// "let a = 1 in let b = 2.0 in let c = (a, b) in let (d, e) = c in print_float e";
+		s = "let rec counter x = " + "let ref = Array.make 1 0 in "
+				+ "let rec f x = " + " let n = ref.(0) + 1 in "
+				+ " let _ = ref.(0) <- n in n in f in "
+				+ " let f = counter 0 in " + " let a = f 0 in print_int a";
+
+		CProg prog = Main.compile(s);
+		new Emit("test").emit(prog);
 	}
 
 }
