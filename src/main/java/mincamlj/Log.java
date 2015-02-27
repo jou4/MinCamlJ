@@ -12,7 +12,7 @@ public class Log {
 	static {
 		DEFAULT_LOGGER.addHandler(new StreamHandler() {
 			{
-				//setOutputStream(System.out);
+				// setOutputStream(System.out);
 				setLevel(Level.ALL);
 			}
 		});

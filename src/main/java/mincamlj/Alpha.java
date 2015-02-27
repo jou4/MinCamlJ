@@ -99,9 +99,10 @@ public class Alpha {
 			Map<String, String> newEnv2 = new HashMap<>(newEnv);
 			funDef.getParams().forEach(
 					p -> newEnv2.put(p.getLeft(), Id.genId(p.getLeft())));
-			return new KLetRec(new KFunDef(new Pair<String, Type>(find(funDef
-					.getName().getLeft(), newEnv), funDef.getName().getRight()),
-					funDef.getParams()
+			return new KLetRec(new KFunDef(
+					new Pair<String, Type>(find(funDef.getName().getLeft(),
+							newEnv), funDef.getName().getRight()), funDef
+							.getParams()
 							.stream()
 							.map(p -> new Pair<>(find(p.getLeft(), newEnv2), p
 									.getRight())).collect(Collectors.toList()),
