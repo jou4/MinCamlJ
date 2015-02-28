@@ -13,19 +13,23 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.RuleContext;
 import org.junit.Test;
 
-public class ParserTest {
+public class MainTest {
+
 	static {
 		Typing.extEnv.putAll(Prelude.preset);
 	}
 
+	private String code = "let rec f x = let rec g y z = x +. y +. z in g in print_float ((f 1.0) 2.0 3.0)";
+
 	@Test
-	public void test() {
-		String s = "";
-		// s = "if a = 10 then a + 2 else a - 3";
-		// s =
-		// "let a = 1 in let b = 2.0 in let c = (a, b) in let (d, e) = c in print_float e";
-		s = "let rec f x = let rec g y z = x +. y +. z in g in print_float ((f 1.0) 2.0 3.0)";
-		MinCamlLexer lexer = new MinCamlLexer(new ANTLRInputStream(s));
+	public void test1() {
+		CProg prog = Main.compile(code);
+		new Emit("test").emit(prog);
+	}
+
+	@Test
+	public void test2() {
+		MinCamlLexer lexer = new MinCamlLexer(new ANTLRInputStream(code));
 		CommonTokenStream tokens = new CommonTokenStream(lexer);
 		MinCamlParser parser = new MinCamlParser(tokens);
 
@@ -65,18 +69,6 @@ public class ParserTest {
 		CProg prog = new Closure().transform(e9);
 		System.out.println(prog);
 
-		byte[] bytes = new Emit("test").emit(prog);
-	}
-
-	@Test
-	public void test2() {
-		String s = "";
-		// s = "if a = 10 then a + 2 else a - 3";
-		// s =
-		// "let a = 1 in let b = 2.0 in let c = (a, b) in let (d, e) = c in print_float e";
-		s = "let rec f x = let rec g y z = x +. y +. z in g in print_float ((f 1.0) 2.0 3.0)";
-
-		CProg prog = Main.compile(s);
 		new Emit("test").emit(prog);
 	}
 
