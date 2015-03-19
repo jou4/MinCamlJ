@@ -51,7 +51,7 @@ public class Main {
 		CProg prog = compile(code);
 		byte[] bytes = new Emit(className).emit(prog);
 
-		File file = new File(outputDir + '\\' + className.replace('.', '\\')
+		File file = new File(outputDir + File.separator + className.replace('.', File.separatorChar)
 				+ ".class");
 		File dir = file.getParentFile();
 		if (!dir.exists()) {
